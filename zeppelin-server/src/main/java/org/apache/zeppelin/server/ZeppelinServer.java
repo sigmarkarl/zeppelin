@@ -342,7 +342,7 @@ public class ZeppelinServer extends ResourceConfig {
     cf.getHttpConfiguration().setRequestHeaderSize(requestHeaderSize);
   }
 
-  private static void setupNotebookServer(
+  public static void setupNotebookServer(
       WebAppContext webapp, ZeppelinConfiguration conf, ServiceLocator serviceLocator) {
     String maxTextMessageSize = conf.getWebsocketMaxTextMessageSize();
     final ServletHolder servletHolder =
@@ -354,7 +354,7 @@ public class ZeppelinServer extends ResourceConfig {
     webapp.addServlet(servletHolder, "/ws/*");
   }
 
-  private static void setupClusterManagerServer(ServiceLocator serviceLocator) {
+  public static void setupClusterManagerServer(ServiceLocator serviceLocator) {
     if (conf.isClusterMode()) {
       ClusterManagerServer clusterManagerServer = ClusterManagerServer.getInstance();
 

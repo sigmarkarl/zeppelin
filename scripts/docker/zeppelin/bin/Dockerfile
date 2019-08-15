@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:16.04
+FROM adoptopenjdk/openjdk12
 MAINTAINER Apache Software Foundation <dev@zeppelin.apache.org>
 
 # `Z_VERSION` will be updated by `dev/change_zeppelin_version.sh`
@@ -22,6 +22,8 @@ ENV LOG_TAG="[ZEPPELIN_${Z_VERSION}]:" \
     Z_HOME="/zeppelin" \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN echo "$LOG_TAG update and install basic packages" && \
     apt-get -y update && \
@@ -39,20 +41,15 @@ RUN echo "$LOG_TAG install tini related packages" && \
     dpkg -i tini.deb && \
     rm tini.deb
 
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-RUN echo "$LOG_TAG Install java8" && \
-    apt-get -y update && \
-    apt-get install -y openjdk-8-jdk && \
-    rm -rf /var/lib/apt/lists/*
-
 # should install conda first before numpy, matploylib since pip and python will be installed by conda
 RUN echo "$LOG_TAG Install miniconda2 related packages" && \
     apt-get -y update && \
     apt-get install -y bzip2 ca-certificates \
     libglib2.0-0 libxext6 libsm6 libxrender1 \
+    build-essential \
     git mercurial subversion && \
     echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
-    wget --quiet https://repo.continuum.io/miniconda/Miniconda2-4.3.11-Linux-x86_64.sh -O ~/miniconda.sh && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-4.6.14-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
@@ -62,17 +59,19 @@ RUN echo "$LOG_TAG Install python related packages" && \
     apt-get install -y python-dev python-pip && \
     apt-get install -y gfortran && \
     # numerical/algebra packages
-    apt-get install -y libblas-dev libatlas-dev liblapack-dev && \
+    apt-get install -y libblas-dev libatlas-base-dev liblapack-dev && \
     # font, image
     apt-get install -y libpng-dev libfreetype6-dev libxft-dev && \
     # for tkinter
     apt-get install -y python-tk libxml2-dev libxslt-dev zlib1g-dev && \
-    pip install numpy==1.12.1 pandas==0.21.1 matplotlib==2.1.1 pandasql==0.7.3 ipython==5.4.1 jupyter_client==5.1.0 ipykernel==4.7.0 bokeh==0.12.10 ggplot==0.11.5 grpcio==1.8.2 bkzep==0.4.0
+    pip install numpy pandas matplotlib pandasql ipython jupyter_client ipykernel bokeh ggplot grpcio bkzep parsimonious
 
 RUN echo "$LOG_TAG Install R related packages" && \
-    echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" | tee -a /etc/apt/sources.list && \
-    gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \
-    gpg -a --export E084DAB9 | apt-key add - && \
+    #echo "deb http://cran.rstudio.com/bin/linux/ubuntu bionic-cran35/" | tee -a /etc/apt/sources.list && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' && \
+    #gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \
+    #gpg -a --export E084DAB9 | apt-key add - && \
     apt-get -y update && \
     apt-get -y install r-base r-base-dev && \
     R -e "install.packages('knitr', repos='http://cran.us.r-project.org')" && \
@@ -96,11 +95,23 @@ RUN echo "$LOG_TAG Cleanup" && \
     apt-get autoclean && \
     apt-get clean
 
-RUN echo "$LOG_TAG Download Zeppelin binary" && \
-    wget -O /tmp/zeppelin-${Z_VERSION}-bin-all.tgz http://archive.apache.org/dist/zeppelin/zeppelin-${Z_VERSION}/zeppelin-${Z_VERSION}-bin-all.tgz && \
-    tar -zxvf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
-    rm -rf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
-    mv /zeppelin-${Z_VERSION}-bin-all ${Z_HOME}
+RUN R -e "if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager')" && \
+   R -e "BiocManager::install()" && \
+   R -e "install.packages('readxl', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('tidyverse', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('gridExtra', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('sparklyr', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('qqman', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('mctest', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('ggfortify', repos='http://cran.us.r-project.org')" && \
+   R -e "install.packages('CMplot', repos='http://cran.us.r-project.org')"
+
+COPY gorr /gorr
+RUN R -e "install.packages('/gorr', repos=NULL, type='source')"
+RUN rm /usr/bin/python && rm /usr/bin/python3 && ln -s /opt/conda/bin/python3 /usr/bin/python && ln -s /opt/conda/bin/python3 /usr/bin/python3
+COPY zeppelin-${Z_VERSION} /zeppelin-${Z_VERSION}
+RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
+#COPY gor-scripts/lib ${Z_HOME}/interpreter/spark
 
 COPY log4j.properties ${Z_HOME}/conf/
 

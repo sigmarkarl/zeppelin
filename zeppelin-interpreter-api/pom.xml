@@ -37,7 +37,7 @@
 
   <properties>
     <!--plugin versions-->
-    <plugin.shade.version>2.3</plugin.shade.version>
+    <plugin.shade.version>3.2.1</plugin.shade.version>
     <shaded.dependency.prefix>org.apache.zeppelin.shaded</shaded.dependency.prefix>
   </properties>
 

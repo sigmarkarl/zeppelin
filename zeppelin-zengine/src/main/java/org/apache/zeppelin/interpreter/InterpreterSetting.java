@@ -26,7 +26,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
-import com.google.gson.internal.StringMap;
+import com.google.gson.internal.LinkedTreeMap;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -528,16 +528,16 @@ public class InterpreterSetting {
   }
 
   public void setProperties(Object object) {
-    if (object instanceof StringMap) {
+    /*if (object instanceof StringMap) {
       StringMap<String> map = (StringMap) properties;
       Properties newProperties = new Properties();
       for (String key : map.keySet()) {
         newProperties.put(key, map.get(key));
       }
       this.properties = newProperties;
-    } else {
+    } else {*/
       this.properties = object;
-    }
+    //}
   }
 
 
@@ -919,12 +919,13 @@ public class InterpreterSetting {
 
   // For backward compatibility of interpreter.json format after ZEPPELIN-2403
   static Map<String, InterpreterProperty> convertInterpreterProperties(Object properties) {
-    if (properties != null && properties instanceof StringMap) {
+    Map<String,InterpreterProperty> ret = null;
+    if (properties != null && properties instanceof LinkedTreeMap) {
       Map<String, InterpreterProperty> newProperties = new HashMap<>();
-      StringMap p = (StringMap) properties;
+      Map p = (Map) properties;
       for (Object o : p.entrySet()) {
         Map.Entry entry = (Map.Entry) o;
-        if (!(entry.getValue() instanceof StringMap)) {
+        if (!(entry.getValue() instanceof LinkedTreeMap)) {
           InterpreterProperty newProperty = new InterpreterProperty(
               entry.getKey().toString(),
               entry.getValue(),
@@ -932,10 +933,10 @@ public class InterpreterSetting {
           newProperties.put(entry.getKey().toString(), newProperty);
         } else {
           // already converted
-          return (Map<String, InterpreterProperty>) properties;
+          ret = (Map<String, InterpreterProperty>) properties;
         }
       }
-      return newProperties;
+      ret = newProperties;
 
     } else if (properties instanceof Map) {
       Map<String, Object> dProperties =
@@ -944,9 +945,9 @@ public class InterpreterSetting {
       for (String key : dProperties.keySet()) {
         Object value = dProperties.get(key);
         if (value instanceof InterpreterProperty) {
-          return (Map<String, InterpreterProperty>) properties;
-        } else if (value instanceof StringMap) {
-          StringMap stringMap = (StringMap) value;
+          ret = (Map<String, InterpreterProperty>) properties;
+        } else if (value instanceof Map) {
+          Map stringMap = (Map) value;
           InterpreterProperty newProperty = new InterpreterProperty(
               key,
               stringMap.get("value"),
@@ -974,9 +975,10 @@ public class InterpreterSetting {
               value.getClass());
         }
       }
-      return newProperties;
+      ret = newProperties;
     }
-    throw new RuntimeException("Can not convert this type: " + properties.getClass());
+    if( ret != null ) return ret;
+    else throw new RuntimeException("Can not convert this type: " + properties.getClass());
   }
 
   public void waitForReady(long timeout) throws InterpreterException {

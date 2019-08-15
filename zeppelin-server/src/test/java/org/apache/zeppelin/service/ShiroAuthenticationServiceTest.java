@@ -36,7 +36,6 @@ import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import sun.security.acl.PrincipalImpl;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(org.apache.shiro.SecurityUtils.class)
@@ -75,7 +74,7 @@ public class ShiroAuthenticationServiceTest {
     PowerMockito.mockStatic(org.apache.shiro.SecurityUtils.class);
     when(org.apache.shiro.SecurityUtils.getSubject()).thenReturn(subject);
     when(subject.isAuthenticated()).thenReturn(true);
-    when(subject.getPrincipal()).thenReturn(new PrincipalImpl(expectedName));
+    //when(subject.getPrincipal()).thenReturn(new PrincipalImpl(expectedName));
 
     Notebook notebook = Mockito.mock(Notebook.class);
     try {

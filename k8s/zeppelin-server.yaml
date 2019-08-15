@@ -28,7 +28,7 @@ data:
   # Default value is 'local.zeppelin-project.org' while it points 127.0.0.1 and `kubectl port-forward zeppelin-server` will give localhost to connects.
   # If you have your ingress controller configured to connect to `zeppelin-server` service and have a domain name for it (with wildcard subdomain point the same address), you can replace serviceDomain field with your own domain.
   serviceDomain: local.zeppelin-project.org:8080
-  sparkContainerImage: spark:2.4.0
+  sparkContainerImage: spark:2.4.3
   nginx.conf: |
     daemon off;
     worker_processes auto;
@@ -84,7 +84,7 @@ spec:
   automountServiceAccountToken: true
   containers:
   - name: zeppelin-server
-    image: apache/zeppelin:0.9.0-SNAPSHOT
+    image: nextcode/zeppelin:0.9.0-SNAPSHOT
     command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
     lifecycle:
       preStop:
@@ -93,7 +93,7 @@ spec:
           command: ["sh", "-c", "ps -ef | grep org.apache.zeppelin.server.ZeppelinServer | grep -v grep | awk '{print $2}' | xargs kill"]
     env:
     - name: ZEPPELIN_K8S_CONTAINER_IMAGE
-      value: apache/zeppelin:0.9.0-SNAPSHOT
+      value: nextcode/zeppelin:0.9.0-SNAPSHOT
     - name: ZEPPELIN_HOME
       value: /zeppelin
     - name: ZEPPELIN_SERVER_RPC_PORTRANGE

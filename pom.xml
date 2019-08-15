@@ -64,25 +64,25 @@
     <module>angular</module>
     <module>shell</module>
     <module>livy</module>
-    <module>hbase</module>
+    <!--module>hbase</module-->
     <module>pig</module>
     <module>jdbc</module>
     <module>file</module>
-    <module>flink</module>
+    <!--module>flink</module-->
     <module>ignite</module>
     <module>kylin</module>
     <module>python</module>
-    <module>lens</module>
-    <module>cassandra</module>
+    <!--module>lens</module-->
+    <!--module>cassandra</module-->
     <module>elasticsearch</module>
     <module>bigquery</module>
     <module>alluxio</module>
-    <module>scio</module>
+    <!--module>scio</module-->
     <module>neo4j</module>
-    <module>sap</module>
-    <module>scalding</module>
+    <!--module>sap</module-->
+    <!--module>scalding</module-->
     <module>java</module>
-    <module>beam</module>
+    <!--module>beam</module-->
     <module>hazelcastjet</module>
     <module>geode</module>
     <module>zeppelin-web</module>
@@ -94,10 +94,10 @@
 
   <properties>
     <!-- language versions -->
-    <java.version>1.8</java.version>
-    <scala.version>2.10.5</scala.version>
-    <scala.binary.version>2.10</scala.binary.version>
-    <scalatest.version>3.0.7</scalatest.version>
+    <java.version>12</java.version>
+    <scala.version>2.12.9</scala.version>
+    <scala.binary.version>2.12</scala.binary.version>
+    <scalatest.version>3.2.0-SNAP10</scalatest.version>
     <scalacheck.version>1.12.5</scalacheck.version>
 
     <!-- frontend maven plugin related versions-->
@@ -109,7 +109,7 @@
     <slf4j.version>1.7.10</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <libthrift.version>0.12.0</libthrift.version>
-    <gson.version>2.2</gson.version>
+    <gson.version>2.8.5</gson.version>
     <gson-extras.version>0.2.1</gson-extras.version>
     <jetty.version>9.4.18.v20190429</jetty.version>
     <httpcomponents.core.version>4.4.1</httpcomponents.core.version>
@@ -150,7 +150,7 @@
     <plugin.antrun.version>1.7</plugin.antrun.version>
     <plugin.download.version>1.3.0</plugin.download.version>
     <plugin.deploy.version>2.8.2</plugin.deploy.version>
-    <plugin.shade.version>3.1.1</plugin.shade.version>
+    <plugin.shade.version>3.2.1</plugin.shade.version>
 
     <PermGen>64m</PermGen>
     <MaxPermGen>512m</MaxPermGen>
@@ -755,10 +755,10 @@
     </profile>
 
     <profile>
-      <id>scala-2.11</id>
+      <id>scala-2.12</id>
       <properties>
-        <scala.version>2.11.8</scala.version>
-        <scala.binary.version>2.11</scala.binary.version>
+        <scala.version>2.12.9</scala.version>
+        <scala.binary.version>2.12</scala.binary.version>
       </properties>
     </profile>
 

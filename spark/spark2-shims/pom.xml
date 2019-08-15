@@ -33,8 +33,8 @@
   <name>Zeppelin: Spark2 Shims</name>
 
   <properties>
-    <scala.binary.version>2.11</scala.binary.version>
-    <spark.version>2.3.2</spark.version>
+    <scala.binary.version>2.12</scala.binary.version>
+    <spark.version>2.4.3</spark.version>
   </properties>
 
   <dependencies>

@@ -243,5 +243,16 @@
       "editOnDblClick": false,
       "completionSupport": false
     }
+  },
+  {
+    "group": "spark",
+    "name": "gor",
+    "className": "gorsat.SparkGORInterpreter",
+    "properties": {},
+    "editor": {
+      "language": "gor",
+      "editOnDblClick": false,
+      "completionSupport": false
+    }
   }
 ]
