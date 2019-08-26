@@ -42,8 +42,8 @@
 
         <!--test library versions-->
         <livy.version>0.5.0-incubating</livy.version>
-        <spark.version>2.1.0</spark.version>
-        <hadoop.version>2.6.0</hadoop.version>
+        <spark.version>2.4.3</spark.version>
+        <hadoop.version>3.2.0</hadoop.version>
         <!--plugin versions-->
         <plugin.failsafe.version>2.16</plugin.failsafe.version>
         <plugin.antrun.version>1.8</plugin.antrun.version>
