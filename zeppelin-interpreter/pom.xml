@@ -43,7 +43,7 @@
     <maven.aeither.provider.version>3.0.3</maven.aeither.provider.version>
     <wagon.version>2.7</wagon.version>
     <jline.version>2.14.3</jline.version>
-    <atomix.version>3.0.0-rc4</atomix.version>
+    <atomix.version>3.1.5</atomix.version>
     <commons-math3.version>3.1.1</commons-math3.version>
     <commons-lang3.version>3.7</commons-lang3.version>
 
@@ -64,6 +64,10 @@
         <exclusion>
           <groupId>org.apache.commons</groupId>
           <artifactId>commons-lang3</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
