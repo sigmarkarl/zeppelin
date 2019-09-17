@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM adoptopenjdk/openjdk12
+FROM ubuntu:19.04
 MAINTAINER Apache Software Foundation <dev@zeppelin.apache.org>
 
 # `Z_VERSION` will be updated by `dev/change_zeppelin_version.sh`
@@ -26,10 +26,10 @@ ENV LOG_TAG="[ZEPPELIN_${Z_VERSION}]:" \
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN echo "$LOG_TAG update and install basic packages" && \
-    apt-get -y update && \
-    apt-get install -y locales && \
+    apt -y update && \
+    apt install -y locales && \
     locale-gen $LANG && \
-    apt-get install -y software-properties-common && \
+    apt install -y software-properties-common openjdk-12-jdk && \
     apt -y autoclean && \
     apt -y dist-upgrade && \
     apt-get install -y build-essential
@@ -68,8 +68,10 @@ RUN echo "$LOG_TAG Install python related packages" && \
 
 RUN echo "$LOG_TAG Install R related packages" && \
     #echo "deb http://cran.rstudio.com/bin/linux/ubuntu bionic-cran35/" | tee -a /etc/apt/sources.list && \
+    
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
-    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' && \
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu disco-cran35/' && \
+    
     #gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \
     #gpg -a --export E084DAB9 | apt-key add - && \
     apt-get -y update && \
@@ -85,11 +87,10 @@ RUN echo "$LOG_TAG Install R related packages" && \
     Rscript -e "library('devtools'); library('Rcpp'); install_github('ramnathv/rCharts')"
 
 # Install kubectl
-RUN apt-get install -y apt-transport-https && \
+RUN apt update && apt install -y apt-transport-https && \  
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list && \
-    apt-get update && \
-    apt-get install -y kubectl
+    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list && \ 
+    apt update && apt install -y kubectl
 
 RUN echo "$LOG_TAG Cleanup" && \
     apt-get autoclean && \
@@ -110,6 +111,26 @@ COPY gorr /gorr
 RUN R -e "install.packages('/gorr', repos=NULL, type='source')"
 RUN rm /usr/bin/python && rm /usr/bin/python3 && ln -s /opt/conda/bin/python3 /usr/bin/python && ln -s /opt/conda/bin/python3 /usr/bin/python3
 COPY zeppelin-${Z_VERSION} /zeppelin-${Z_VERSION}
+#COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.7.jar
+#COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.8.1.jar
+#COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.9.jar
+#COPY zeppelin-${Z_VERSION}/interpreter/spark/okio-2.2.2.jar /zeppelin-${Z_VERSION}/interpreter/spark/okio-1.6.0.jar
+#COPY zeppelin-${Z_VERSION}/interpreter/spark/guice-4.2.2.jar /zeppelin-${Z_VERSION}/interpreter/spark/sisu-guice-3.0.2-no_aop.jar
+COPY interpreter-setting.json /zeppelin-${Z_VERSION}/interpreter/spark/interpreter-setting.json
+
+#COPY gor-model-8.1-SNAPSHOT.jar /zeppelin-${Z_VERSION}/interpreter/spark/gor-model-8.1-SNAPSHOT.jar
+#COPY gor-gortools-8.1-SNAPSHOT.jar /zeppelin-${Z_VERSION}/interpreter/spark/gor-gortools-8.1-SNAPSHOT.jar
+
+COPY hail-python.zip /zeppelin-${Z_VERSION}/interpreter/spark/pyspark/
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/netty-all-4.0.23.Final.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jersey-client-1.19.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jersey-server-1.19.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jetty-util-6.1.26.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jetty-6.1.26.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/log4j-over-slf4j-1.7.26.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/log4j-over-slf4j-1.7.28.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/logback-classic-1.2.3.jar
+RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/logback-core-1.2.3.jar
 RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
 #COPY gor-scripts/lib ${Z_HOME}/interpreter/spark
 

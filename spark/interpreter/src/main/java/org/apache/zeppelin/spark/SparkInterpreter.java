@@ -70,7 +70,7 @@ public class SparkInterpreter extends AbstractInterpreter {
       System.setProperty("scala.color", "true");
     }
     this.enableSupportedVersionCheck = java.lang.Boolean.parseBoolean(
-        properties.getProperty("zeppelin.spark.enableSupportedVersionCheck", "true"));
+        properties.getProperty("zeppelin.spark.enableSupportedVersionCheck", "false"));
     innerInterpreterClassMap.put("2.10", "org.apache.zeppelin.spark.SparkScala210Interpreter");
     innerInterpreterClassMap.put("2.11", "org.apache.zeppelin.spark.SparkScala211Interpreter");
     innerInterpreterClassMap.put("2.12", "org.apache.zeppelin.spark.SparkScala212Interpreter");
