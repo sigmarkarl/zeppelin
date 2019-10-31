@@ -16,6 +16,9 @@
 FROM ubuntu:19.04
 MAINTAINER Apache Software Foundation <dev@zeppelin.apache.org>
 
+ARG ZEPPELIN_USER_ID=2100
+ARG ZEPPELIN_GROUP_ID=2100
+
 # `Z_VERSION` will be updated by `dev/change_zeppelin_version.sh`
 ENV Z_VERSION="0.9.0-SNAPSHOT"
 ENV LOG_TAG="[ZEPPELIN_${Z_VERSION}]:" \
@@ -24,6 +27,9 @@ ENV LOG_TAG="[ZEPPELIN_${Z_VERSION}]:" \
     LC_ALL=en_US.UTF-8
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN groupadd --gid $ZEPPELIN_GROUP_ID zeppelin \
+    && useradd -ms /bin/bash -d ${Z_HOME} zeppelin --uid $ZEPPELIN_USER_ID --gid $ZEPPELIN_GROUP_ID
 
 RUN echo "$LOG_TAG update and install basic packages" && \
     apt -y update && \
@@ -68,14 +74,14 @@ RUN echo "$LOG_TAG Install python related packages" && \
 
 RUN echo "$LOG_TAG Install R related packages" && \
     #echo "deb http://cran.rstudio.com/bin/linux/ubuntu bionic-cran35/" | tee -a /etc/apt/sources.list && \
-    
+
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
     add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu disco-cran35/' && \
-    
+
     #gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \
     #gpg -a --export E084DAB9 | apt-key add - && \
     apt-get -y update && \
-    apt-get -y install r-base r-base-dev && \
+    apt-get -y --allow-unauthenticated install r-base r-base-dev && \
     R -e "install.packages('knitr', repos='http://cran.us.r-project.org')" && \
     R -e "install.packages('ggplot2', repos='http://cran.us.r-project.org')" && \
     R -e "install.packages('googleVis', repos='http://cran.us.r-project.org')" && \
@@ -87,9 +93,9 @@ RUN echo "$LOG_TAG Install R related packages" && \
     Rscript -e "library('devtools'); library('Rcpp'); install_github('ramnathv/rCharts')"
 
 # Install kubectl
-RUN apt update && apt install -y apt-transport-https && \  
+RUN apt update && apt install -y apt-transport-https && \
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list && \ 
+    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list && \
     apt update && apt install -y kubectl
 
 RUN echo "$LOG_TAG Cleanup" && \
@@ -134,7 +140,16 @@ RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/logback-core-1.2.3.jar
 RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
 #COPY gor-scripts/lib ${Z_HOME}/interpreter/spark
 
+#RUN echo "$LOG_TAG Download Zeppelin binary" && \
+#    wget -O /tmp/zeppelin-${Z_VERSION}-bin-all.tgz http://archive.apache.org/dist/zeppelin/zeppelin-${Z_VERSION}/zeppelin-${Z_VERSION}-bin-all.tgz && \
+#    tar -zxvf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
+#    rm -rf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
+#    mv /zeppelin-${Z_VERSION}-bin-all/* ${Z_HOME}/ && \
+RUN chown -R zeppelin:zeppelin ${Z_HOME}/
+
 COPY log4j.properties ${Z_HOME}/conf/
+
+USER zeppelin
 
 EXPOSE 8080
 

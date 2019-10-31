@@ -95,8 +95,9 @@
   <properties>
     <!-- language versions -->
     <java.version>12</java.version>
-    <scala.version>2.12.9</scala.version>
+    <scala.version>2.12.10</scala.version>
     <scala.binary.version>2.12</scala.binary.version>
+    <scala.2.11.version>2.11.12</scala.2.11.version>
     <scalatest.version>3.2.0-SNAP10</scalatest.version>
     <scalacheck.version>1.12.5</scalacheck.version>
 
@@ -752,7 +753,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <scala.version>2.10.5</scala.version>
+        <scala.version>${scala.2.10.version}</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
       </properties>
     </profile>
@@ -760,7 +761,7 @@
     <profile>
       <id>scala-2.12</id>
       <properties>
-        <scala.version>2.12.9</scala.version>
+        <scala.version>2.12.10</scala.version>
         <scala.binary.version>2.12</scala.binary.version>
       </properties>
     </profile>
