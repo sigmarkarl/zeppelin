@@ -54,7 +54,7 @@ public abstract class SparkShims {
     this.properties = properties;
   }
 
-  private static SparkShims loadShims(String sparkVersion, Properties properties)
+  private static SparkShims loadShims(String sparkVersion, Properties properties, Object entryPoint)
       throws ReflectiveOperationException {
     Class<?> sparkShimsClass;
     LOGGER.info("Initializing shims for Spark 2.x");
@@ -64,15 +64,22 @@ public abstract class SparkShims {
       sparkShimsClass = Class.forName("org.apache.zeppelin.spark.Spark1Shims");
     }*/
 
-    Constructor c = sparkShimsClass.getConstructor(Properties.class);
-    return (SparkShims) c.newInstance(properties);
+    Constructor c = sparkShimsClass.getConstructor(Properties.class, Object.class);
+    return (SparkShims) c.newInstance(properties, entryPoint);
   }
 
-  public static SparkShims getInstance(String sparkVersion, Properties properties) {
+  /**
+   *
+   * @param sparkVersion
+   * @param properties
+   * @param entryPoint  entryPoint is SparkContext for Spark 1.x SparkSession for Spark 2.x
+   * @return
+   */
+  public static SparkShims getInstance(String sparkVersion, Properties properties, Object entryPoint) {
     if (sparkShims == null) {
       String sparkMajorVersion = getSparkMajorVersion(sparkVersion);
       try {
-        sparkShims = loadShims(sparkMajorVersion, properties);
+        sparkShims = loadShims(sparkMajorVersion, properties, entryPoint);
       } catch (ReflectiveOperationException e) {
         throw new RuntimeException(e);
       }
@@ -94,6 +101,7 @@ public abstract class SparkShims {
 
   public abstract String showDataFrame(Object obj, int maxResult);
 
+  public abstract Object getAsDataFrame(String value);
 
   protected void buildSparkJobUrl(String master,
                                   String sparkWebUrl,

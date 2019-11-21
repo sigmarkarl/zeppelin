@@ -57,6 +57,7 @@
     <module>zeppelin-interpreter-api</module>
     <module>zeppelin-zengine</module>
     <module>zeppelin-display</module>
+    <module>kotlin</module>
     <module>groovy</module>
     <module>spark</module>
     <module>submarine</module>
@@ -85,6 +86,8 @@
     <!--module>beam</module-->
     <module>hazelcastjet</module>
     <module>geode</module>
+    <module>ksql</module>
+    <module>sparql</module>
     <module>zeppelin-web</module>
     <module>zeppelin-server</module>
     <module>zeppelin-jupyter</module>
