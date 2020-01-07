@@ -105,7 +105,8 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
   // personalized
   private transient Map<String, Paragraph> userParagraphMap = new HashMap<>();
   private transient Map<String, String> localProperties = new HashMap<>();
-  private transient Map<String, ParagraphRuntimeInfo> runtimeInfos = new HashMap<>();
+  // serialize runtimeInfos to frontend but not to note file (via gson's ExclusionStrategy)
+  private Map<String, ParagraphRuntimeInfo> runtimeInfos = new HashMap<>();
 
   public static String  PARAGRAPH_CONFIG_RUNONSELECTIONCHANGE = "runOnSelectionChange";
   private static boolean PARAGRAPH_CONFIG_RUNONSELECTIONCHANGE_DEFAULT = true;
@@ -233,6 +234,7 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
         } else {
           this.scriptText = this.text.substring(headingSpace.length() + intpText.length() + 1).trim();
         }
+        config.putAll(localProperties);
       } else {
         setIntpText("");
         this.scriptText = this.text.trim();
@@ -394,7 +396,9 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
       }
     }
 
-    return Strings.isNullOrEmpty(scriptText);
+    // don't skip paragraph when local properties is not empty.
+    // local properties can customize the behavior of interpreter. e.g. %r.shiny(type=run)
+    return Strings.isNullOrEmpty(scriptText) && localProperties.isEmpty();
   }
 
   public boolean execute(boolean blocking) {
@@ -465,9 +469,8 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
 
       // inject form
       String script = this.scriptText;
-      if (interpreter.getFormType() == FormType.NATIVE) {
-        settings.clear();
-      } else if (interpreter.getFormType() == FormType.SIMPLE) {
+      if ("simple".equalsIgnoreCase(localProperties.get("form")) ||
+              interpreter.getFormType() == FormType.SIMPLE) {
         // inputs will be built from script body
         LinkedHashMap<String, Input> inputs = Input.extractSimpleQueryForm(script, false);
         LinkedHashMap<String, Input> noteInputs = Input.extractSimpleQueryForm(script, true);
@@ -490,6 +493,8 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
         }
         script = Input.getSimpleQuery(note.getNoteParams(), scriptBody, true);
         script = Input.getSimpleQuery(settings.getParams(), script, false);
+      } else {
+        settings.clear();
       }
 
       LOGGER.debug("RUN : " + script);

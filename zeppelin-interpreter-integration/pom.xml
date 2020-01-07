@@ -503,6 +503,14 @@
               <groupId>org.apache.zeppelin</groupId>
               <artifactId>zeppelin-python</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>org.apache.zeppelin</groupId>
+              <artifactId>r</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.google.protobuf</groupId>
+              <artifactId>protobuf-java</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
       </dependencies>

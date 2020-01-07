@@ -26,6 +26,7 @@ import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,11 +60,33 @@ public abstract class ProcessLauncher implements ExecuteResultHandler {
                          Map<String, String> envs) {
     this.commandLine = commandLine;
     this.envs = envs;
+    this.processOutput = new ProcessLogOutputStream();
+  }
+
+  public ProcessLauncher(CommandLine commandLine,
+                         Map<String, String> envs,
+                         ProcessLogOutputStream processLogOutput) {
+    this.commandLine = commandLine;
+    this.envs = envs;
+    this.processOutput = processLogOutput;
+  }
+
+  /**
+   * In some cases we need to redirect process output to paragraph's InterpreterOutput.
+   * e.g. In %r.shiny for shiny app
+   * @param redirectedContext
+   */
+  public void setRedirectedContext(InterpreterContext redirectedContext) {
+    if (redirectedContext != null) {
+      LOGGER.info("Start to redirect process output to interpreter output");
+    } else {
+      LOGGER.info("Stop to redirect process output to interpreter output");
+    }
+    this.processOutput.redirectedContext = redirectedContext;
   }
 
   public void launch() {
     DefaultExecutor executor = new DefaultExecutor();
-    this.processOutput = new ProcessLogOutputStream();
     executor.setStreamHandler(new PumpStreamHandler(processOutput));
     this.watchdog = new ExecuteWatchdog(ExecuteWatchdog.INFINITE_TIMEOUT);
     executor.setWatchdog(watchdog);
@@ -140,10 +163,11 @@ public abstract class ProcessLauncher implements ExecuteResultHandler {
     processOutput.stopCatchLaunchOutput();
   }
 
-  class ProcessLogOutputStream extends LogOutputStream {
+  public static class ProcessLogOutputStream extends LogOutputStream {
 
     private boolean catchLaunchOutput = true;
     private StringBuilder launchOutput = new StringBuilder();
+    private InterpreterContext redirectedContext;
 
     public void stopCatchLaunchOutput() {
       this.catchLaunchOutput = false;
@@ -163,6 +187,13 @@ public abstract class ProcessLauncher implements ExecuteResultHandler {
       }
       if (catchLaunchOutput) {
         launchOutput.append(s + "\n");
+      }
+      if (redirectedContext != null) {
+        try {
+          redirectedContext.out.write(s + "\n");
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
       }
     }
   }

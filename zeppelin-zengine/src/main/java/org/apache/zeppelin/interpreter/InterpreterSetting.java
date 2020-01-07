@@ -717,7 +717,7 @@ public class InterpreterSetting {
     }
     Set<String> intersection = new HashSet<>(userAndRoles);
     intersection.retainAll(option.getOwners());
-    return intersection.isEmpty();
+    return !intersection.isEmpty();
   }
 
   //////////////////////////// IMPORTANT ////////////////////////////////////////////////
@@ -1005,6 +1005,15 @@ public class InterpreterSetting {
 
   public void waitForReady() throws InterpreterException {
     waitForReady(Long.MAX_VALUE);
+  }
+
+  public InterpreterInfo getDefaultInterpreterInfo() throws Exception {
+    for (InterpreterInfo interpreterInfo : interpreterInfos) {
+      if (interpreterInfo.isDefaultInterpreter()) {
+        return interpreterInfo;
+      }
+    }
+    throw new Exception("No default interpreter info found in interpreter setting: " + name);
   }
 
   public static String toJson(InterpreterSetting intpSetting) {
