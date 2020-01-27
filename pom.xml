@@ -106,7 +106,7 @@
     <scala.binary.version>2.12</scala.binary.version>
     <scala.2.11.version>2.11.12</scala.2.11.version>
     <scalatest.version>3.2.0-SNAP10</scalatest.version>
-    <scalacheck.version>1.12.5</scalacheck.version>
+    <scalacheck.version>1.14.3</scalacheck.version>
 
     <!-- frontend maven plugin related versions-->
     <node.version>v12.3.1</node.version>

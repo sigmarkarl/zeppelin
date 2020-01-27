@@ -328,7 +328,7 @@
   {
     "group": "spark",
     "name": "gor",
-    "className": "gorsat.SparkGORInterpreter",
+    "className": "com.nextcode.zeppelin.SparkGORInterpreter",
     "properties": {},
     "editor": {
       "language": "gor",

@@ -24,6 +24,7 @@ import io.atomix.cluster.impl.DefaultClusterMembershipService;
 import io.atomix.cluster.impl.DefaultNodeDiscoveryService;
 import io.atomix.cluster.messaging.BroadcastService;
 import io.atomix.cluster.messaging.MessagingService;
+import io.atomix.cluster.messaging.UnicastService;
 import io.atomix.cluster.messaging.impl.NettyMessagingService;
 import io.atomix.primitive.PrimitiveState;
 import io.atomix.protocols.raft.RaftServer;
@@ -163,8 +164,13 @@ public class ClusterManagerServer extends ClusterManager {
         Member member = Member.builder(MemberId.from(zeplServerHost + ":" + raftServerPort))
             .withAddress(address)
             .build();
-        messagingService = NettyMessagingService.builder()
-            .withAddress(address).build().start().join();
+        messagingService = new NettyMessagingService.Builder() {
+          @Override
+          public MessagingService build() {
+            return null;
+          }
+        }.build();
+            //.withAddress(address).build().start().join();
         RaftServerProtocol protocol = new RaftServerMessagingProtocol(
             messagingService, ClusterManager.protocolSerializer, raftAddressMap::get);
 
@@ -175,6 +181,11 @@ public class ClusterManagerServer extends ClusterManager {
           }
 
           @Override
+          public UnicastService getUnicastService() {
+            return null;
+          }
+
+          @Override
           public BroadcastService getBroadcastService() {
             return new BroadcastServiceAdapter();
           }
@@ -182,10 +193,12 @@ public class ClusterManagerServer extends ClusterManager {
 
         ManagedClusterMembershipService clusterService = new DefaultClusterMembershipService(
             member,
+            null,
             new DefaultNodeDiscoveryService(bootstrapService, member,
                 new BootstrapDiscoveryProvider(clusterNodes)),
             bootstrapService,
-            new MembershipConfig());
+            null);
+            //new MembershipConfig());
 
         File atomixDateDir = com.google.common.io.Files.createTempDir();
         atomixDateDir.deleteOnExit();
@@ -196,7 +209,7 @@ public class ClusterManagerServer extends ClusterManager {
             .withStorage(RaftStorage.builder()
                 .withStorageLevel(StorageLevel.MEMORY)
                 .withDirectory(atomixDateDir)
-                .withSerializer(storageSerializer)
+                //.withSerializer(storageSerializer)
                 .withMaxSegmentSize(1024 * 1024)
                 .build());
 

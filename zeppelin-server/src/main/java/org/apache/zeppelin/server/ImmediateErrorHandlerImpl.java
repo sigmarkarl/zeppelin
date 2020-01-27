@@ -47,7 +47,7 @@ public class ImmediateErrorHandlerImpl implements ImmediateErrorHandler {
     }
   }
 
-  List<ErrorData> waitForAtLeastOneConstructionError(long waitTime) throws InterruptedException {
+  public List<ErrorData> waitForAtLeastOneConstructionError(long waitTime) throws InterruptedException {
     synchronized (this) {
       while (constructionErrors.size() <= 0 && waitTime > 0) {
         long currentTime = System.currentTimeMillis();

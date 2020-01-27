@@ -16,8 +16,8 @@
 FROM ubuntu:19.04
 MAINTAINER Apache Software Foundation <dev@zeppelin.apache.org>
 
-ARG ZEPPELIN_USER_ID=2100
-ARG ZEPPELIN_GROUP_ID=2100
+ARG ZEPPELIN_USER_ID=3000
+ARG ZEPPELIN_GROUP_ID=3000
 
 # `Z_VERSION` will be updated by `dev/change_zeppelin_version.sh`
 ENV Z_VERSION="0.9.0-SNAPSHOT"
@@ -37,7 +37,7 @@ RUN echo "$LOG_TAG update and install basic packages" && \
     apt -y update && \
     apt install -y locales && \
     locale-gen $LANG && \
-    apt install -y software-properties-common openjdk-12-jdk && \
+    apt install -y software-properties-common openjdk-13-jdk && \
     apt -y autoclean && \
     apt -y dist-upgrade && \
     apt-get install -y build-essential
@@ -118,28 +118,27 @@ RUN R -e "if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages
 COPY gorr /gorr
 RUN R -e "install.packages('/gorr', repos=NULL, type='source')"
 RUN rm /usr/bin/python && rm /usr/bin/python3 && ln -s /opt/conda/bin/python3 /usr/bin/python && ln -s /opt/conda/bin/python3 /usr/bin/python3
-COPY zeppelin-${Z_VERSION} /zeppelin-${Z_VERSION}
+COPY zeppelin-${Z_VERSION} /zeppelin
 #COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.7.jar
 #COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.8.1.jar
 #COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.9.jar
 #COPY zeppelin-${Z_VERSION}/interpreter/spark/okio-2.2.2.jar /zeppelin-${Z_VERSION}/interpreter/spark/okio-1.6.0.jar
 #COPY zeppelin-${Z_VERSION}/interpreter/spark/guice-4.2.2.jar /zeppelin-${Z_VERSION}/interpreter/spark/sisu-guice-3.0.2-no_aop.jar
-COPY interpreter-setting.json /zeppelin-${Z_VERSION}/interpreter/spark/interpreter-setting.json
+COPY interpreter-setting.json /zeppelin/interpreter/spark/interpreter-setting.json
 
 #COPY gor-model-8.1-SNAPSHOT.jar /zeppelin-${Z_VERSION}/interpreter/spark/gor-model-8.1-SNAPSHOT.jar
 #COPY gor-gortools-8.1-SNAPSHOT.jar /zeppelin-${Z_VERSION}/interpreter/spark/gor-gortools-8.1-SNAPSHOT.jar
 
-COPY hail-python.zip /zeppelin-${Z_VERSION}/interpreter/spark/pyspark/
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/netty-all-4.0.23.Final.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jersey-client-1.19.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jersey-server-1.19.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jetty-util-6.1.26.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/jetty-6.1.26.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/log4j-over-slf4j-1.7.26.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/log4j-over-slf4j-1.7.28.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/logback-classic-1.2.3.jar
-RUN rm -rf zeppelin-${Z_VERSION}/interpreter/spark/logback-core-1.2.3.jar
-RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
+#COPY hail-python.zip /zeppelin-${Z_VERSION}/interpreter/spark/pyspark/
+RUN rm -rf zeppelin/interpreter/spark/netty-all-4.0.23.Final.jar
+RUN rm -rf zeppelin/interpreter/spark/jersey-client-1.19.jar
+RUN rm -rf zeppelin/interpreter/spark/jersey-server-1.19.jar
+RUN rm -rf zeppelin/interpreter/spark/jetty-util-6.1.26.jar
+RUN rm -rf zeppelin/interpreter/spark/jetty-6.1.26.jar
+RUN rm -rf zeppelin/interpreter/spark/log4j-over-slf4j-1.7.30.jar
+RUN rm -rf zeppelin/interpreter/spark/logback-classic-1.2.3.jar
+RUN rm -rf zeppelin/interpreter/spark/logback-core-1.2.3.jar
+#RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
 #COPY gor-scripts/lib ${Z_HOME}/interpreter/spark
 
 #RUN echo "$LOG_TAG Download Zeppelin binary" && \
@@ -147,9 +146,32 @@ RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
 #    tar -zxvf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
 #    rm -rf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
 #    mv /zeppelin-${Z_VERSION}-bin-all/* ${Z_HOME}/ && \
-RUN chown -R zeppelin:zeppelin ${Z_HOME}/
 
 COPY log4j.properties ${Z_HOME}/conf/
+COPY 100-interpreter-spec.yaml /zeppelin/k8s/interpreter/
+COPY gorservices-zeppelin-9.7-SNAPSHOT.jar /zeppelin/interpreter/spark/
+#COPY gorservices-spark-9.6-SNAPSHOT.jar /zeppelin/interpreter/spark/
+COPY spark-repl_2.12-3.0.0-preview2.jar /zeppelin/interpreter/spark/
+
+
+
+# RUN apt install -y rsync liblz4-dev openjdk-12-jdk-headless && \
+#     update-alternatives --set java /usr/lib/jvm/java-12-openjdk-amd64/bin/java
+
+# RUN ln -s /usr/lib/jvm/java-12-openjdk-amd64/include /usr/lib/jvm/include && \
+#     ln -s /usr/lib/jvm/java-12-openjdk-amd64/lib /usr/lib/jvm/lib
+
+# RUN git clone https://github.com/sigmarkarl/hail.git
+
+# RUN cd hail/hail && \
+#     make install-on-cluster HAIL_COMPILE_NATIVES=1 SPARK_VERSION=2.4.4
+
+# RUN cp /usr/local/lib/python3.7/dist-packages/hail/hail-all-spark.jar /zeppelin/interpreter/spark/
+# RUN update-alternatives --set java /usr/lib/jvm/java-13-openjdk-amd64/bin/java
+
+
+
+RUN chown -R zeppelin:zeppelin ${Z_HOME}/
 
 USER zeppelin
 

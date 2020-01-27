@@ -45,7 +45,7 @@ class SparkZeppelinContext(val sc: SparkContext,
     "ipyspark" -> "org.apache.zeppelin.spark.IPySparkInterpreter",
     "r" -> "org.apache.zeppelin.spark.SparkRInterpreter",
     "kotlin" -> "org.apache.zeppelin.spark.KotlinSparkInterpreter",
-    "gor" -> "gorsat.SparkGORInterpreter"
+    "gor" -> "com.nextcode.zeppelin.SparkGORInterpreter"
   )
 
   private val supportedClasses = scala.collection.mutable.ArrayBuffer[Class[_]]()
