@@ -54,7 +54,7 @@
   <modules>
     <module>zeppelin-interpreter-parent</module>
     <module>zeppelin-interpreter</module>
-    <module>zeppelin-interpreter-api</module>
+    <module>zeppelin-interpreter-shaded</module>
     <module>zeppelin-zengine</module>
     <module>zeppelin-display</module>
     <module>rlang</module>
@@ -96,7 +96,6 @@
     <module>zeppelin-jupyter</module>
     <module>zeppelin-plugins</module>
     <module>zeppelin-distribution</module>
-    <module>zeppelin-web-angular</module>
   </modules>
 
   <properties>
@@ -375,31 +374,31 @@
         </configuration>
       </plugin>
 
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>flatten-maven-plugin</artifactId>
-        <version>1.0.0</version>
-        <configuration>
-          <flattenMode>ossrh</flattenMode>
-          <updatePomFile>true</updatePomFile>
-        </configuration>
-        <executions>
-          <execution>
-            <id>flatten</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>flatten</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>flatten.clean</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>clean</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
+<!--      <plugin>-->
+<!--        <groupId>org.codehaus.mojo</groupId>-->
+<!--        <artifactId>flatten-maven-plugin</artifactId>-->
+<!--        <version>1.0.0</version>-->
+<!--        <configuration>-->
+<!--          <flattenMode>ossrh</flattenMode>-->
+<!--          <updatePomFile>true</updatePomFile>-->
+<!--        </configuration>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>flatten</id>-->
+<!--            <phase>process-resources</phase>-->
+<!--            <goals>-->
+<!--              <goal>flatten</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
+<!--          <execution>-->
+<!--            <id>flatten.clean</id>-->
+<!--            <phase>clean</phase>-->
+<!--            <goals>-->
+<!--              <goal>clean</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
 
       <!-- (TODO zjffdu disable it temporary to make CI pass)Test coverage plugin -->
 
@@ -788,9 +787,12 @@
     </profile>
 
     <profile>
-      <id>r</id>
+      <id>web-angular</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <modules>
-        <module>r</module>
+        <module>zeppelin-web-angular</module>
       </modules>
     </profile>
 
@@ -963,6 +965,7 @@
               <exclude>**/*.avsc</exclude>
               <exclude>**/*.avro</exclude>
               <exclude>**/*.log</exclude>
+              <exclude>**/*.ipynb</exclude>
               <exclude>**/test/resources/**</exclude>
               <exclude>**/.settings/*</exclude>
               <exclude>**/.classpath</exclude>
