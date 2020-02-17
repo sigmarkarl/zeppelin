@@ -32,8 +32,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
-import org.apache.zeppelin.interpreter.BaseZeppelinContext;
+import org.apache.zeppelin.interpreter.ZeppelinContext;
 import org.apache.zeppelin.interpreter.util.SqlSplitter;
+import org.apache.zeppelin.tabledata.TableDataUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,7 +159,7 @@ public class JDBCInterpreter extends KerberosInterpreter {
   }
 
   @Override
-  public BaseZeppelinContext getZeppelinContext() {
+  public ZeppelinContext getZeppelinContext() {
     return null;
   }
 
@@ -566,9 +567,11 @@ public class JDBCInterpreter extends KerberosInterpreter {
         msg.append(TAB);
       }
       if (StringUtils.isNotEmpty(md.getColumnLabel(i))) {
-        msg.append(removeTablePrefix(replaceReservedChars(md.getColumnLabel(i))));
+        msg.append(removeTablePrefix(replaceReservedChars(
+                TableDataUtils.normalizeColumn(md.getColumnLabel(i)))));
       } else {
-        msg.append(removeTablePrefix(replaceReservedChars(md.getColumnName(i))));
+        msg.append(removeTablePrefix(replaceReservedChars(
+                TableDataUtils.normalizeColumn(md.getColumnName(i)))));
       }
     }
     msg.append(NEWLINE);
@@ -588,7 +591,7 @@ public class JDBCInterpreter extends KerberosInterpreter {
         } else {
           resultValue = resultSet.getString(i);
         }
-        msg.append(replaceReservedChars(resultValue));
+        msg.append(replaceReservedChars(TableDataUtils.normalizeColumn(resultValue)));
         if (i != md.getColumnCount()) {
           msg.append(TAB);
         }

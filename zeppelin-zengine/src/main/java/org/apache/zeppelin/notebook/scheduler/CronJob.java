@@ -41,6 +41,7 @@ public class CronJob implements org.quartz.Job {
 
     Notebook notebook = (Notebook) jobDataMap.get("notebook");
     String noteId = jobDataMap.getString("noteId");
+    logger.info("Start cron job of note: " + noteId);
     Note note = null;
     try {
       note = notebook.getNote(noteId);
@@ -107,6 +108,10 @@ public class CronJob implements org.quartz.Job {
             cronExecutingUser,
             StringUtils.isEmpty(cronExecutingRoles) ? null : cronExecutingRoles,
             null);
-    note.runAll(authenticationInfo, true);
+    try {
+      note.runAll(authenticationInfo, true);
+    } catch (Exception e) {
+      logger.warn("Fail to run note", e);
+    }
   }
 }
