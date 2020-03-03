@@ -271,7 +271,8 @@ public class NotebookServer extends WebSocketServlet
       ZeppelinConfiguration conf = ZeppelinConfiguration.create();
       boolean allowAnonymous = conf.isAnonymousAllowed();
       if (!allowAnonymous && messagereceived.principal.equals("anonymous")) {
-        throw new Exception("Anonymous access not allowed ");
+        LOG.warn("Anonymous access not allowed.");
+        return;
       }
 
       if (Message.isDisabledForRunningNotes(messagereceived.op)) {
@@ -429,7 +430,7 @@ public class NotebookServer extends WebSocketServlet
           getEditorSetting(conn, messagereceived);
           break;
         case GET_INTERPRETER_SETTINGS:
-          getInterpreterSettings(conn);
+          getInterpreterSettings(conn, messagereceived);
           break;
         case WATCHER:
           connectionManager.switchConnectionToWatcher(conn);
@@ -529,10 +530,12 @@ public class NotebookServer extends WebSocketServlet
 
   public void getInterpreterBindings(NotebookSocket conn, Message fromMessage) throws IOException {
     List<InterpreterSettingsList> settingList = new ArrayList<>();
+    ServiceContext context = getServiceContext(fromMessage);
     String noteId = (String) fromMessage.data.get("noteId");
     Note note = getNotebook().getNote(noteId);
     if (note != null) {
-      List<InterpreterSetting> bindedSettings = note.getBindedInterpreterSettings();
+      List<InterpreterSetting> bindedSettings =
+              note.getBindedInterpreterSettings(new ArrayList<>(context.getUserAndRoles()));
       for (InterpreterSetting setting : bindedSettings) {
         settingList.add(new InterpreterSettingsList(setting.getId(), setting.getName(),
                 setting.getInterpreterInfos(), true));
@@ -545,6 +548,7 @@ public class NotebookServer extends WebSocketServlet
   public void saveInterpreterBindings(NotebookSocket conn, Message fromMessage) throws IOException {
     List<InterpreterSettingsList> settingList = new ArrayList<>();
     String noteId = (String) fromMessage.data.get("noteId");
+    ServiceContext context = getServiceContext(fromMessage);
     Note note = getNotebook().getNote(noteId);
     if (note != null) {
       List<String> settingIdList =
@@ -552,8 +556,11 @@ public class NotebookServer extends WebSocketServlet
                       new TypeToken<ArrayList<String>>() {}.getType());
       if (!settingIdList.isEmpty()) {
         note.setDefaultInterpreterGroup(settingIdList.get(0));
+        getNotebook().saveNote(note,
+                new AuthenticationInfo(fromMessage.principal, fromMessage.roles, fromMessage.ticket));
       }
-      List<InterpreterSetting> bindedSettings = note.getBindedInterpreterSettings();
+      List<InterpreterSetting> bindedSettings =
+              note.getBindedInterpreterSettings(new ArrayList<>(context.getUserAndRoles()));
       for (InterpreterSetting setting : bindedSettings) {
         settingList.add(new InterpreterSettingsList(setting.getId(), setting.getName(),
                 setting.getInterpreterInfos(), true));
@@ -671,7 +678,7 @@ public class NotebookServer extends WebSocketServlet
     }
 
     String msg = ClusterMessage.serializeMessage(clusterMessage);
-    ClusterManagerServer.getInstance().broadcastClusterEvent(
+    ClusterManagerServer.getInstance(conf).broadcastClusterEvent(
         ClusterManagerServer.CLUSTER_NOTE_EVENT_TOPIC, msg);
   }
 
@@ -1174,13 +1181,16 @@ public class NotebookServer extends WebSocketServlet
   }
 
   protected void convertNote(NotebookSocket conn, Message fromMessage) throws IOException {
-    String note = gson.toJson(fromMessage.get("note"));
-
-    Message resp = new Message(OP.CONVERT_NOTE_NBFORMAT)
-            .put("nbformat", new JupyterUtil().getNbformat(note))
-            .put("name", fromMessage.get("name"));
-
-    conn.send(serializeMessage(resp));
+    String noteId = fromMessage.get("noteId").toString();
+    Note note = getNotebook().getNote(noteId);
+    if (note == null) {
+      throw new IOException("No such note: " + noteId);
+    } else {
+      Message resp = new Message(OP.CONVERTED_NOTE_NBFORMAT)
+              .put("nbformat", new JupyterUtil().getNbformat(note.toJson()))
+              .put("name", fromMessage.get("name"));
+      conn.send(serializeMessage(resp));
+    }
   }
 
   protected Note importNote(NotebookSocket conn, Message fromMessage) throws IOException {
@@ -1908,34 +1918,6 @@ public class NotebookServer extends WebSocketServlet
     }
   }
 
-
-  /**
-   * This callback is for paragraph that runs on RemoteInterpreterProcess.
-   */
-  @Override
-  public void onOutputAppend(Paragraph paragraph, int idx, String output) {
-    Message msg =
-        new Message(OP.PARAGRAPH_APPEND_OUTPUT).put("noteId", paragraph.getNote().getId())
-            .put("paragraphId", paragraph.getId()).put("data", output);
-    connectionManager.broadcast(paragraph.getNote().getId(), msg);
-  }
-
-  /**
-   * This callback is for paragraph that runs on RemoteInterpreterProcess.
-   */
-  @Override
-  public void onOutputUpdate(Paragraph paragraph, int idx, InterpreterResultMessage result) {
-    Message msg =
-        new Message(OP.PARAGRAPH_UPDATE_OUTPUT).put("noteId", paragraph.getNote().getId())
-            .put("paragraphId", paragraph.getId()).put("data", result.getData());
-    connectionManager.broadcast(paragraph.getNote().getId(), msg);
-  }
-
-  @Override
-  public void onOutputUpdateAll(Paragraph paragraph, List<InterpreterResultMessage> msgs) {
-    // TODO
-  }
-
   @Override
   public void checkpointOutput(String noteId, String paragraphId) {
     try {
@@ -1996,7 +1978,8 @@ public class NotebookServer extends WebSocketServlet
         continue;
       }
 
-      List<InterpreterSetting> intpSettings = note.getBindedInterpreterSettings();
+      List<InterpreterSetting> intpSettings =
+              note.getBindedInterpreterSettings(new ArrayList<>(note.getOwners()));
       if (intpSettings.isEmpty()) {
         continue;
       }
@@ -2054,11 +2037,18 @@ public class NotebookServer extends WebSocketServlet
         });
   }
 
-  private void getInterpreterSettings(NotebookSocket conn)
+  private void getInterpreterSettings(NotebookSocket conn, Message message)
       throws IOException {
-    List<InterpreterSetting> availableSettings = getNotebook().getInterpreterSettingManager().get();
+    ServiceContext context = getServiceContext(message);
+    List<InterpreterSetting> allSettings = getNotebook().getInterpreterSettingManager().get();
+    List<InterpreterSetting> result = new ArrayList<>();
+    for (InterpreterSetting setting : allSettings) {
+      if (setting.isUserAuthorized(new ArrayList<>(context.getUserAndRoles()))) {
+        result.add(setting);
+      }
+    }
     conn.send(serializeMessage(
-        new Message(OP.INTERPRETER_SETTINGS).put("interpreterSettings", availableSettings)));
+        new Message(OP.INTERPRETER_SETTINGS).put("interpreterSettings", result)));
   }
 
   @Override

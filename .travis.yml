@@ -51,7 +51,7 @@ services:
 env:
   global:
     # Interpreters does not required by zeppelin-server integration tests
-    - INTERPRETERS='!beam,!hbase,!pig,!jdbc,!file,!flink,!ignite,!kylin,!lens,!cassandra,!elasticsearch,!bigquery,!alluxio,!scio,!livy,!groovy,!sap,!java,!geode,!neo4j,!hazelcastjet,!submarine,!sparql'
+    - INTERPRETERS='!beam,!hbase,!pig,!jdbc,!file,!flink,!ignite,!kylin,!lens,!cassandra,!elasticsearch,!bigquery,!alluxio,!scio,!livy,!groovy,!sap,!java,!geode,!neo4j,!hazelcastjet,!submarine,!sparql,!mongodb'
 
 matrix:
   include:
@@ -84,7 +84,7 @@ matrix:
       sudo: false
       dist: xenial
       jdk: "openjdk8"
-      env: CI="true" BUILD_FLAG="clean -DskipTests -DskipRat" TEST_FLAG="package -DskipRat" MODULES="-pl ${INTERPRETERS}" TEST_MODULES="-pl zeppelin-web-angular"
+      env: CI="true" BUILD_FLAG="clean -DskipTests -DskipRat" TEST_FLAG="package -DskipRat" MODULES="-pl ${INTERPRETERS}" TEST_MODULES="-pl zeppelin-web-angular -Pweb-angular"
       addons:
         apt:
           packages:
@@ -97,14 +97,14 @@ matrix:
     - sudo: required
       jdk: "openjdk8"
       dist: xenial
-      env: BUILD_PLUGINS="false" PYTHON="3" R="true" PROFILE="-Phelium-dev -Pexamples" BUILD_FLAG="install -Pbuild-distr -DskipRat -DskipTests" TEST_FLAG="verify -Pusing-packaged-distr -DskipRat" MODULES="-pl zeppelin-server,spark/spark-dependencies,markdown,angular,shell -am" TEST_PROJECTS="-Dtests.to.exclude=**/org/apache/zeppelin/spark/*,**/HeliumApplicationFactoryTest.java -DfailIfNoTests=false"
+      env: BUILD_PLUGINS="true" PYTHON="3" R="true" PROFILE="-Phelium-dev -Pexamples" BUILD_FLAG="install -Pbuild-distr -DskipRat -DskipTests" TEST_FLAG="verify -Pusing-packaged-distr -DskipRat" MODULES="-pl zeppelin-server,zeppelin-web,spark/spark-dependencies,markdown,angular,shell -am" TEST_PROJECTS="-Dtests.to.exclude=**/org/apache/zeppelin/spark/*,**/HeliumApplicationFactoryTest.java -DfailIfNoTests=false"
 
     # Test selenium with spark module for spark 2.3
     - jdk: "openjdk8"
       dist: xenial
       addons:
         firefox: "31.0"
-      env: BUILD_PLUGINS="true" CI="true" PYTHON="2" R="true" SCALA_VER="2.11" SPARK_VER="2.3.2" HADOOP_VER="2.6" PROFILE="-Pspark-2.3 -Phadoop2 -Phelium-dev -Pexamples -Pintegration -Pspark-scala-2.11 -P!web-angular" BUILD_FLAG="clean install -DskipTests -DskipRat -pl ${INTERPRETERS}" TEST_FLAG="verify -DskipRat" TEST_PROJECTS="-pl zeppelin-integration -DfailIfNoTests=false"
+      env: BUILD_PLUGINS="true" CI="true" PYTHON="2" R="true" SCALA_VER="2.11" SPARK_VER="2.3.2" HADOOP_VER="2.6" PROFILE="-Pspark-2.3 -Phadoop2 -Phelium-dev -Pexamples -Pintegration -Pspark-scala-2.11" BUILD_FLAG="clean install -DskipTests -DskipRat -pl ${INTERPRETERS}" TEST_FLAG="verify -DskipRat" TEST_PROJECTS="-pl zeppelin-integration -DfailIfNoTests=false"
 
     # Test interpreter modules
     - jdk: "openjdk8"

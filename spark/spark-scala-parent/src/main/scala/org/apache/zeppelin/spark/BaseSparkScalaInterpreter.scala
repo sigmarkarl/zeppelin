@@ -19,7 +19,7 @@ package org.apache.zeppelin.spark
 
 
 import java.io.File
-import java.net.URLClassLoader
+import java.net.{URL, URLClassLoader}
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -27,7 +27,7 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.zeppelin.interpreter.util.InterpreterOutputStream
-import org.apache.zeppelin.interpreter.{ZeppelinContext, InterpreterContext, InterpreterGroup, InterpreterResult}
+import org.apache.zeppelin.interpreter.{InterpreterContext, InterpreterGroup, InterpreterResult, ZeppelinContext}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
@@ -57,6 +57,10 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
   protected var sqlContext: SQLContext = _
 
   protected var sparkSession: Object = _
+
+  protected var outputDir: File = _
+
+  protected var userJars: Seq[String] = _
 
   protected var sparkHttpServer: Object = _
 
@@ -206,7 +210,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
 
     val hiveSiteExisted: Boolean =
       Thread.currentThread().getContextClassLoader.getResource("hive-site.xml") != null
-    val hiveEnabled = conf.getBoolean("spark.useHiveContext", false)
+    val hiveEnabled = conf.getBoolean("zeppelin.spark.useHiveContext", false)
     if (hiveEnabled && hiveSiteExisted) {
       sqlContext = Class.forName("org.apache.spark.sql.hive.HiveContext")
         .getConstructor(classOf[SparkContext]).newInstance(sc).asInstanceOf[SQLContext]
@@ -240,7 +244,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
     builder.getClass.getMethod("config", classOf[SparkConf]).invoke(builder, conf)
 
     if (conf.get("spark.sql.catalogImplementation", "in-memory").toLowerCase == "hive"
-      || conf.get("spark.useHiveContext", "false").toLowerCase == "true") {
+      || conf.get("zeppelin.spark.useHiveContext", "false").toLowerCase == "true") {
       val hiveSiteExisted: Boolean =
         Thread.currentThread().getContextClassLoader.getResource("hive-site.xml") != null
       val hiveClassesPresent =

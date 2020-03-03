@@ -146,6 +146,14 @@ RUN rm -rf zeppelin/interpreter/spark/logback-core-1.2.3.jar
 #    tar -zxvf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
 #    rm -rf /tmp/zeppelin-${Z_VERSION}-bin-all.tgz && \
 #    mv /zeppelin-${Z_VERSION}-bin-all/* ${Z_HOME}/ && \
+#    chown -R root:root ${Z_HOME} && \
+#    mkdir -p ${Z_HOME}/logs ${Z_HOME}/run ${Z_HOME}/webapps && \
+    # Allow process to edit /etc/passwd, to create a user entry for zeppelin
+#    chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
+    # Give access to some specific folders
+#    chmod -R 775 "${Z_HOME}/logs" "${Z_HOME}/run" "${Z_HOME}/notebook" "${Z_HOME}/conf" && \
+    # Allow process to create new folders (e.g. webapps)
+#    chmod 775 ${Z_HOME}
 
 COPY log4j.properties ${Z_HOME}/conf/
 COPY 100-interpreter-spec.yaml /zeppelin/k8s/interpreter/
@@ -175,7 +183,7 @@ COPY zeppelin-site.xml /zeppelin/conf/
 
 RUN chown -R zeppelin:zeppelin ${Z_HOME}/
 
-USER zeppelin
+USER 1000
 
 EXPOSE 8080
 

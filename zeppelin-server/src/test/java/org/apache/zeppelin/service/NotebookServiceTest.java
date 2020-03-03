@@ -359,22 +359,13 @@ public class NotebookServiceTest {
     verify(callback).onSuccess(p, context);
     assertEquals(2, p.getConfig().size());
 
-    // run all paragraphs
+    // run all paragraphs, with null paragraph list provided
     reset(callback);
-    notebookService.runAllParagraphs(
+    assertTrue(notebookService.runAllParagraphs(
             note1.getId(),
-            gson.fromJson(gson.toJson(note1.getParagraphs()), new TypeToken<List>(){}.getType()),
-            context, callback);
-    verify(callback, times(2)).onSuccess(any(), any());
+            null,
+            context, callback));
 
-    // run paragraph synchronously via invalid code
-    //TODO(zjffdu) must sleep for a while, otherwise will get wrong status. This should be due to
-    //bug of job component.
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
     reset(callback);
     runStatus = notebookService.runParagraph(note1.getId(), p.getId(), "my_title", "invalid_code",
         new HashMap<>(), new HashMap<>(), false, true, context, callback);

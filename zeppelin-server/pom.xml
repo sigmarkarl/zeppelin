@@ -58,34 +58,6 @@
     <maven.compiler.target>12</maven.compiler.target>
   </properties>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.scala-lang</groupId>
-        <artifactId>scala-library</artifactId>
-        <version>${scala.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.scala-lang</groupId>
-        <artifactId>scala-compiler</artifactId>
-        <version>${scala.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.scala-lang</groupId>
-        <artifactId>scala-reflect</artifactId>
-        <version>${scala.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.scala-lang</groupId>
-        <artifactId>scalap</artifactId>
-        <version>${scala.version}</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <dependencies>
 
     <dependency>
@@ -305,24 +277,6 @@
       <version>${quartz.scheduler.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>${scala.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-compiler</artifactId>
-      <version>${scala.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-reflect</artifactId>
-      <version>${scala.version}</version>
-    </dependency>
-
     <!--test libraries-->
     <dependency>
       <groupId>junit</groupId>
@@ -334,19 +288,6 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_${scala.binary.version}</artifactId>
-      <version>${scalatest.version}</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.scala-lang.modules</groupId>
-          <artifactId>scala-xml_${scala.binary.version}</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
@@ -464,41 +405,6 @@
         </configuration>
       </plugin>
 
-
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>${plugin.scala.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-        <version>${plugin.scalatest.version}</version>
-        <configuration>
-          <stderr/>
-          <systemProperties>
-            <spark.testing>1</spark.testing>
-          </systemProperties>
-        </configuration>
-        <executions>
-          <execution>
-            <id>test</id>
-            <phase>integration-test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
       <!-- publish test jar as well so that zeppelin-interpreter-integration can use it -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -521,18 +427,6 @@
   </build>
 
   <profiles>
-    <profile>
-      <id>scala-2.12</id>
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>org.scala-lang.modules</groupId>
-            <artifactId>scala-xml_${scala.binary.version}</artifactId>
-            <version>1.1.1</version>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
-    </profile>
     <profile>
       <id>using-source-tree</id>
       <activation>

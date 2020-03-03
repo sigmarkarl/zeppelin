@@ -96,6 +96,7 @@
     <module>zeppelin-jupyter</module>
     <module>zeppelin-plugins</module>
     <module>zeppelin-distribution</module>
+    <module>mongodb</module>
   </modules>
 
   <properties>
@@ -788,9 +789,6 @@
 
     <profile>
       <id>web-angular</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
       <modules>
         <module>zeppelin-web-angular</module>
       </modules>
@@ -1106,8 +1104,8 @@
                <!--The following files are mechanical-->
               <exclude>**/R/rzeppelin/DESCRIPTION</exclude>
               <exclude>**/R/rzeppelin/NAMESPACE</exclude>
-
-              <exclude>zeppelin-jupyter-adapter/src/main/resources/grpc/**/*</exclude>
+              
+              <exclude>zeppelin-jupyter-interpreter/src/main/resources/grpc/jupyter/*.py</exclude>
             </excludes>
           </configuration>
 

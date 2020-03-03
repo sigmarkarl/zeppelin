@@ -18,6 +18,7 @@
 package org.apache.zeppelin.notebook;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
@@ -67,11 +68,11 @@ import java.util.Set;
 public class Note implements JsonSerializable {
   private static final Logger logger = LoggerFactory.getLogger(Note.class);
 
-  // serialize Paragraph#runtimeInfos to frontend but not to note file
+  // serialize Paragraph#runtimeInfos and Note#path to frontend but not to note file
   private static final ExclusionStrategy strategy = new ExclusionStrategy() {
     @Override
     public boolean shouldSkipField(FieldAttributes f) {
-      return f.getName().equals("runtimeInfos");
+      return f.getName().equals("runtimeInfos") || f.getName().equals("path");
     }
 
     @Override
@@ -112,7 +113,9 @@ public class Note implements JsonSerializable {
    */
   private Map<String, Object> info = new HashMap<>();
 
-  // The front end needs to judge TRASH_FOLDER according to the path
+  // The front end needs to judge TRASH_FOLDER according to the path,
+  // But it doesn't need to be saved in note json. So we will exclude this when saving
+  // note to NotebookRepo.
   private String path;
 
   /********************************** transient fields ******************************************/
@@ -911,16 +914,14 @@ public class Note implements JsonSerializable {
   }
 
   public List<Paragraph> getParagraphs() {
-    synchronized (paragraphs) {
-      return new LinkedList<>(paragraphs);
-    }
+    return this.paragraphs;
   }
 
   // TODO(zjffdu) how does this used ?
   private void snapshotAngularObjectRegistry(String user) {
     angularObjects = new HashMap<>();
 
-    List<InterpreterSetting> settings = getBindedInterpreterSettings();
+    List<InterpreterSetting> settings = getBindedInterpreterSettings(Lists.newArrayList(user));
     if (settings == null || settings.size() == 0) {
       return;
     }
@@ -937,7 +938,7 @@ public class Note implements JsonSerializable {
   private void removeAllAngularObjectInParagraph(String user, String paragraphId) {
     angularObjects = new HashMap<>();
 
-    List<InterpreterSetting> settings = getBindedInterpreterSettings();
+    List<InterpreterSetting> settings = getBindedInterpreterSettings(Lists.newArrayList(user));
     if (settings == null || settings.size() == 0) {
       return;
     }
@@ -975,7 +976,7 @@ public class Note implements JsonSerializable {
     }
   }
 
-  public List<InterpreterSetting> getBindedInterpreterSettings() {
+  public List<InterpreterSetting> getBindedInterpreterSettings(List<String> userAndRoles) {
     // use LinkedHashSet because order matters, the first one represent the default interpreter setting.
     Set<InterpreterSetting> settings = new LinkedHashSet<>();
     // add the default interpreter group
@@ -987,11 +988,35 @@ public class Note implements JsonSerializable {
     // add the interpreter setting with the same group of default interpreter group
     for (InterpreterSetting intpSetting : interpreterSettingManager.get()) {
       if (intpSetting.getGroup().equals(defaultIntpSetting.getGroup())) {
-        settings.add(intpSetting);
+        if (intpSetting.isUserAuthorized(userAndRoles)) {
+          settings.add(intpSetting);
+        }
       }
     }
 
     // add interpreter group used by each paragraph
+    for (Paragraph p : getParagraphs()) {
+      try {
+        Interpreter intp = p.getBindedInterpreter();
+        InterpreterSetting interpreterSetting = (
+                (ManagedInterpreterGroup) intp.getInterpreterGroup()).getInterpreterSetting();
+        if (interpreterSetting.isUserAuthorized(userAndRoles)) {
+          settings.add(interpreterSetting);
+        }
+      } catch (InterpreterNotFoundException e) {
+        // ignore this
+      }
+    }
+
+    return new ArrayList<>(settings);
+  }
+
+  /**
+   * Get InterpreterSetting used by the paragraphs of this note.
+   * @return
+   */
+  public List<InterpreterSetting> getUsedInterpreterSettings() {
+    Set<InterpreterSetting> settings = new HashSet<>();
     for (Paragraph p : getParagraphs()) {
       try {
         Interpreter intp = p.getBindedInterpreter();
@@ -1001,7 +1026,6 @@ public class Note implements JsonSerializable {
         // ignore this
       }
     }
-
     return new ArrayList<>(settings);
   }
 
@@ -1081,7 +1105,7 @@ public class Note implements JsonSerializable {
   public String toJson() {
     return gson.toJson(this);
   }
-  
+
   /**
    * Parse note json from note file. Throw IOException if fail to parse note json.
    *
