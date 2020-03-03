@@ -356,6 +356,10 @@
       <scope>test</scope>
       <exclusions>
         <exclusion>
+          <groupId>xerces</groupId>
+          <artifactId>xercesImpl</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.seleniumhq.selenium</groupId>
           <artifactId>selenium-android-driver</artifactId>
         </exclusion>

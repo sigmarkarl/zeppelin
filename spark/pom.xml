@@ -41,17 +41,17 @@
         <datanucleus.core.version>3.2.10</datanucleus.core.version>
 
         <!-- spark versions -->
-        <spark.version>2.4.3</spark.version>
-        <spark.scala.version>2.12.9</spark.scala.version>
+        <spark.version>3.0.0-preview2</spark.version>
+        <spark.scala.version>2.12.11</spark.scala.version>
         <spark.scala.binary.version>2.12</spark.scala.binary.version>
-        <py4j.version>0.10.7</py4j.version>
+        <py4j.version>0.10.8.1</py4j.version>
 
         <spark.archive>spark-${spark.version}</spark.archive>
         <spark.src.download.url>
             https://archive.apache.org/dist/spark/${spark.archive}/${spark.archive}.tgz
         </spark.src.download.url>
         <spark.bin.download.url>
-            https://archive.apache.org/dist/spark/${spark.archive}/${spark.archive}-bin-without-hadoop-scala-2.12.tgz
+            https://archive.apache.org/dist/spark/${spark.archive}/${spark.archive}-bin-without-hadoop.tgz
         </spark.bin.download.url>
 
         <maven.compiler.source>12</maven.compiler.source>

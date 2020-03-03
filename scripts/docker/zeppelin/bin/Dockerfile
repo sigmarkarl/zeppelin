@@ -149,9 +149,11 @@ RUN rm -rf zeppelin/interpreter/spark/logback-core-1.2.3.jar
 
 COPY log4j.properties ${Z_HOME}/conf/
 COPY 100-interpreter-spec.yaml /zeppelin/k8s/interpreter/
-COPY gorservices-zeppelin-9.7-SNAPSHOT.jar /zeppelin/interpreter/spark/
+COPY sm-zeppelin-10.0.0.jar /zeppelin/interpreter/spark/
+COPY shiro.ini /zeppelin/conf/
+COPY zeppelin-site.xml /zeppelin/conf/
 #COPY gorservices-spark-9.6-SNAPSHOT.jar /zeppelin/interpreter/spark/
-COPY spark-repl_2.12-3.0.0-preview2.jar /zeppelin/interpreter/spark/
+#COPY spark-repl_2.12-3.0.0-preview2.jar /zeppelin/interpreter/spark/
 
 
 
