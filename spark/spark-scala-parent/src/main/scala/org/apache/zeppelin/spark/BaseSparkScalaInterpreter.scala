@@ -18,12 +18,17 @@
 package org.apache.zeppelin.spark
 
 
-import java.io.File
+import java.io.{File, IOException}
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.commons.lang3.StringUtils
+import org.apache.hadoop.yarn.client.api.YarnClient
+import org.apache.hadoop.yarn.conf.YarnConfiguration
+import org.apache.hadoop.yarn.util.ConverterUtils
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.zeppelin.interpreter.util.InterpreterOutputStream
@@ -175,6 +180,18 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
     bind(name, tpe, value, modifier.asScala.toList)
 
   protected def close(): Unit = {
+    // delete stagingDir for yarn mode
+    if (conf.get("spark.master").startsWith("yarn")) {
+      val hadoopConf = new YarnConfiguration()
+      val appStagingBaseDir = if (conf.contains("spark.yarn.stagingDir")) {
+        new Path(conf.get("spark.yarn.stagingDir"))
+      } else {
+        FileSystem.get(hadoopConf).getHomeDirectory()
+      }
+      val stagingDirPath = new Path(appStagingBaseDir, ".sparkStaging" + "/" + sc.applicationId)
+      cleanupStagingDirInternal(stagingDirPath, hadoopConf)
+    }
+
     if (sparkHttpServer != null) {
       sparkHttpServer.getClass.getMethod("stop").invoke(sparkHttpServer)
     }
@@ -187,6 +204,18 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
       sparkSession = null
     }
     sqlContext = null
+  }
+
+  private def cleanupStagingDirInternal(stagingDirPath: Path, hadoopConf: Configuration): Unit = {
+    try {
+      val fs = stagingDirPath.getFileSystem(hadoopConf)
+      if (fs.delete(stagingDirPath, true)) {
+        LOGGER.info(s"Deleted staging directory $stagingDirPath")
+      }
+    } catch {
+      case ioe: IOException =>
+        LOGGER.warn("Failed to cleanup staging dir " + stagingDirPath, ioe)
+    }
   }
 
   protected def createSparkContext(): Unit = {
@@ -277,6 +306,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
       case Some(url) => sparkUrl = url
       case None =>
     }
+    useYarnProxyURLIfNeeded()
 
     bind("spark", sparkSession.getClass.getCanonicalName, sparkSession, List("""@transient"""))
     bind("sc", "org.apache.spark.SparkContext", sc, List("""@transient"""))
@@ -303,12 +333,32 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
     if (StringUtils.isBlank(webUiUrl)) {
       webUiUrl = sparkUrl;
     }
+    useYarnProxyURLIfNeeded()
+
     sparkShims.setupSparkListener(sc.master, webUiUrl, InterpreterContext.get)
 
     z = new SparkZeppelinContext(sc, sparkShims,
       interpreterGroup.getInterpreterHookRegistry,
       properties.getProperty("zeppelin.spark.maxResult", "1000").toInt)
     bind("z", z.getClass.getCanonicalName, z, List("""@transient"""))
+  }
+
+  private def useYarnProxyURLIfNeeded() {
+    if (properties.getProperty("spark.webui.yarn.useProxy", "false").toBoolean) {
+      if (sc.getConf.get("spark.master").startsWith("yarn")) {
+        val appId = sc.applicationId
+        val yarnClient = YarnClient.createYarnClient
+        val yarnConf = new YarnConfiguration()
+        // disable timeline service as we only query yarn app here.
+        // Otherwise we may hit this kind of ERROR:
+        // java.lang.ClassNotFoundException: com.sun.jersey.api.client.config.ClientConfig
+        yarnConf.set("yarn.timeline-service.enabled", "false")
+        yarnClient.init(yarnConf)
+        yarnClient.start()
+        val appReport = yarnClient.getApplicationReport(ConverterUtils.toApplicationId(appId))
+        this.sparkUrl = appReport.getTrackingUrl
+      }
+    }
   }
 
   private def isSparkSessionPresent(): Boolean = {

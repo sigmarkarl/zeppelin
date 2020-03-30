@@ -19,7 +19,7 @@ package org.apache.zeppelin.flink;
 
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.zeppelin.interpreter.InterpreterContext;
@@ -54,6 +54,7 @@ public class JobManager {
     String paragraphId = context.getParagraphId();
     JobClient previousJobClient = this.jobs.put(paragraphId, jobClient);
     FlinkJobProgressPoller thread = new FlinkJobProgressPoller(flinkWebUI, jobClient.getJobID(), context);
+    thread.setName("JobProgressPoller-Thread-" + paragraphId);
     thread.start();
     this.jobProgressPollerMap.put(jobClient.getJobID(), thread);
     if (previousJobClient != null) {
@@ -135,6 +136,7 @@ public class JobManager {
     }
 
     FlinkJobProgressPoller jobProgressPoller = jobProgressPollerMap.remove(jobClient.getJobID());
+    jobProgressPoller.cancel();
     jobProgressPoller.interrupt();
   }
 
@@ -156,7 +158,6 @@ public class JobManager {
 
     @Override
     public void run() {
-
       while (!Thread.currentThread().isInterrupted() && running.get()) {
         try {
           JsonNode rootNode = Unirest.get(flinkWebUI + "/jobs/" + jobId.toString())

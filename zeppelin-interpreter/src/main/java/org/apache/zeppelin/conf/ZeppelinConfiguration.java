@@ -30,7 +30,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.ConfigurationNode;
 import org.apache.commons.exec.environment.EnvironmentUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -394,7 +394,7 @@ public class ZeppelinConfiguration extends XMLConfiguration {
   }
 
   public String getNotebookDir() {
-    return getString(ConfVars.ZEPPELIN_NOTEBOOK_DIR);
+    return getRelativeDir(ConfVars.ZEPPELIN_NOTEBOOK_DIR);
   }
 
   public String getNotebookRunId() {
@@ -472,6 +472,22 @@ public class ZeppelinConfiguration extends XMLConfiguration {
 
   public String getS3SignerOverride() {
     return getString(ConfVars.ZEPPELIN_NOTEBOOK_S3_SIGNEROVERRIDE);
+  }
+
+  public String getOSSBucketName() {
+    return getString(ConfVars.ZEPPELIN_NOTEBOOK_OSS_BUCKET);
+  }
+
+  public String getOSSEndpoint() {
+    return getString(ConfVars.ZEPPELIN_NOTEBOOK_OSS_ENDPOINT);
+  }
+
+  public String getOSSAccessKeyId() {
+    return getString(ConfVars.ZEPPELIN_NOTEBOOK_OSS_ACCESSKEYID);
+  }
+
+  public String getOSSAccessKeySecret() {
+    return getString(ConfVars.ZEPPELIN_NOTEBOOK_OSS_ACCESSKEYSECRET);
   }
 
   public String getMongoUri() {
@@ -593,6 +609,10 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return anonymousAllowed;
   }
 
+  public boolean isJobManagerEnabled() {
+    return getBoolean(ConfVars.ZEPPELIN_JOBMANAGER_ENABLE);
+  }
+
   public boolean isUsernameForceLowerCase() {
     return getBoolean(ConfVars.ZEPPELIN_USERNAME_FORCE_LOWERCASE);
   }
@@ -707,12 +727,20 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return getString(ConfVars.ZEPPELIN_PROXY_PASSWORD);
   }
 
+  public Boolean isIndexRebuild() {
+    return getBoolean(ConfVars.ZEPPELIN_SEARCH_INDEX_REBUILD);
+  }
+
   public Boolean isZeppelinSearchUseDisk() {
     return getBoolean(ConfVars.ZEPPELIN_SEARCH_USE_DISK);
   }
 
-  public String getZeppelinSearchTempPath() {
-    return getRelativeDir(ConfVars.ZEPPELIN_SEARCH_TEMP_PATH);
+  public String getZeppelinSearchIndexPath() {
+    return getRelativeDir(ConfVars.ZEPPELIN_SEARCH_INDEX_PATH);
+  }
+
+  public Boolean isOnlyYarnCluster() {
+    return getBoolean(ConfVars.ZEPPELIN_SPARK_ONLY_YARN_CLUSTER);
   }
 
   public String getClusterAddress() {
@@ -873,6 +901,10 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_NOTEBOOK_S3_KMS_KEY_REGION("zeppelin.notebook.s3.kmsKeyRegion", null),
     ZEPPELIN_NOTEBOOK_S3_SSE("zeppelin.notebook.s3.sse", false),
     ZEPPELIN_NOTEBOOK_S3_SIGNEROVERRIDE("zeppelin.notebook.s3.signerOverride", null),
+    ZEPPELIN_NOTEBOOK_OSS_BUCKET("zeppelin.notebook.oss.bucket", "zeppelin"),
+    ZEPPELIN_NOTEBOOK_OSS_ENDPOINT("zeppelin.notebook.oss.endpoint", "http://oss-cn-hangzhou.aliyuncs.com"),
+    ZEPPELIN_NOTEBOOK_OSS_ACCESSKEYID("zeppelin.notebook.oss.accesskeyid", null),
+    ZEPPELIN_NOTEBOOK_OSS_ACCESSKEYSECRET("zeppelin.notebook.oss.accesskeysecret", null),
     ZEPPELIN_NOTEBOOK_AZURE_CONNECTION_STRING("zeppelin.notebook.azure.connectionString", null),
     ZEPPELIN_NOTEBOOK_AZURE_SHARE("zeppelin.notebook.azure.share", "zeppelin"),
     ZEPPELIN_NOTEBOOK_AZURE_USER("zeppelin.notebook.azure.user", "user"),
@@ -896,7 +928,7 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_CONFIG_STORAGE_CLASS("zeppelin.config.storage.class",
         "org.apache.zeppelin.storage.LocalConfigStorage"),
     ZEPPELIN_DEP_LOCALREPO("zeppelin.dep.localrepo", "local-repo"),
-    ZEPPELIN_HELIUM_REGISTRY("zeppelin.helium.registry", "helium," + HELIUM_PACKAGE_DEFAULT_URL),
+    ZEPPELIN_HELIUM_REGISTRY("zeppelin.helium.registry", "helium"),
     ZEPPELIN_HELIUM_NODE_INSTALLER_URL("zeppelin.helium.node.installer.url",
             "https://nodejs.org/dist/"),
     ZEPPELIN_HELIUM_NPM_INSTALLER_URL("zeppelin.helium.npm.installer.url",
@@ -935,6 +967,9 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_INTERPRETER_LIFECYCLE_MANAGER_TIMEOUT_THRESHOLD(
         "zeppelin.interpreter.lifecyclemanager.timeout.threshold", 3600000L),
 
+    ZEPPELIN_INTERPRETER_YARN_MONITOR_INTERVAL_SECS(
+            "zeppelin.interpreter.yarn.monitor.interval_secs", 10),
+
     ZEPPELIN_INTERPRETER_SCHEDULER_POOL_SIZE("zeppelin.scheduler.threadpool.size", 100),
 
     ZEPPELIN_OWNER_ROLE("zeppelin.notebook.default.owner.username", ""),
@@ -964,8 +999,11 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_PROXY_URL("zeppelin.proxy.url", null),
     ZEPPELIN_PROXY_USER("zeppelin.proxy.user", null),
     ZEPPELIN_PROXY_PASSWORD("zeppelin.proxy.password", null),
-    ZEPPELIN_SEARCH_USE_DISK("zeppelin.search.use.disk", false),
-    ZEPPELIN_SEARCH_TEMP_PATH("zeppelin.search.temp.path", System.getProperty("java.io.tmpdir"));
+    ZEPPELIN_SEARCH_INDEX_REBUILD("zeppelin.search.index.rebuild", false),
+    ZEPPELIN_SEARCH_USE_DISK("zeppelin.search.use.disk", true),
+    ZEPPELIN_SEARCH_INDEX_PATH("zeppelin.search.index.path", "/tmp/zeppelin-index"),
+    ZEPPELIN_JOBMANAGER_ENABLE("zeppelin.jobmanager.enable", false),
+    ZEPPELIN_SPARK_ONLY_YARN_CLUSTER("zeppelin.spark.only_yarn_cluster", false);
 
     private String varName;
     @SuppressWarnings("rawtypes")
