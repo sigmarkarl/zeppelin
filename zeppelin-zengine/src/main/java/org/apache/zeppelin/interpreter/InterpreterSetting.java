@@ -1003,7 +1003,7 @@ public class InterpreterSetting {
   // For backward compatibility of interpreter.json format after ZEPPELIN-2403
   static Map<String, InterpreterProperty> convertInterpreterProperties(Object properties) {
     Map<String,InterpreterProperty> ret = null;
-    if (properties != null && properties instanceof LinkeTreeMap) {
+    if (properties != null && properties instanceof LinkedTreeMap) {
       Map<String, InterpreterProperty> newProperties = new LinkedHashMap<>();
       Map p = (Map) properties;
       for (Object o : p.entrySet()) {

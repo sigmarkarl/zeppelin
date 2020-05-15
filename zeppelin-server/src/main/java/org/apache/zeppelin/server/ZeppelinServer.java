@@ -109,7 +109,7 @@ public class ZeppelinServer extends ResourceConfig {
   public static Server jettyWebServer;
   public static ServiceLocator sharedServiceLocator;
 
-  private static ZeppelinConfiguration conf;
+  public static ZeppelinConfiguration conf;
 
   public static void reset() {
     conf = null;

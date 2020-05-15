@@ -116,6 +116,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
+                <version>4.3.1</version>
                 <executions>
                     <execution>
                         <id>eclipse-add-source</id>
@@ -139,9 +140,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <scalaVersion>2.12.9</scalaVersion>
-                    <source>12</source>
-                    <target>12</target>
+                    <scalaVersion>2.12.11</scalaVersion>
+                    <source>13</source>
+                    <target>13</target>
                     <args>
                         <arg>-unchecked</arg>
                         <arg>-deprecation</arg>
@@ -214,7 +215,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <spark.version>2.4.4</spark.version>
+                <spark.version>2.4.5</spark.version>
                 <protobuf.version>2.5.0</protobuf.version>
                 <py4j.version>0.10.7</py4j.version>
             </properties>
