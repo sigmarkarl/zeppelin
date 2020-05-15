@@ -36,7 +36,7 @@
 
     <properties>
         <interpreter.name>r</interpreter.name>
-        <spark.version>2.4.5</spark.version>
+        <spark.version>3.0.0-preview2</spark.version>
         <grpc.version>1.15.0</grpc.version>
 
         <spark.archive>spark-${spark.version}</spark.archive>
