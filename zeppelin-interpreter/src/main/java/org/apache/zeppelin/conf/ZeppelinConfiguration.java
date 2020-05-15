@@ -395,6 +395,22 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     }
   }
 
+  public String getPemKeyFile() {
+      return getString(ConfVars.ZEPPELIN_SSL_PEM_KEY);
+  }
+
+  public String getPemKeyPassword() {
+      return getString(ConfVars.ZEPPELIN_SSL_PEM_KEY_PASSWORD);
+  }
+
+  public String getPemCertFile() {
+      return getString(ConfVars.ZEPPELIN_SSL_PEM_CERT);
+  }
+
+  public String getPemCAFile() {
+      return getString(ConfVars.ZEPPELIN_SSL_PEM_CA);
+  }
+
   public String getNotebookDir() {
     return getRelativeDir(ConfVars.ZEPPELIN_NOTEBOOK_DIR);
   }
@@ -668,6 +684,10 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return getString(ConfVars.ZEPPELIN_SERVER_JETTY_NAME);
   }
 
+  public boolean sendJettyName() {
+    return getBoolean(ConfVars.ZEPPELIN_SERVER_SEND_JETTY_NAME);
+  }
+
   public Integer getJettyRequestHeaderSize() {
     return getInt(ConfVars.ZEPPELIN_SERVER_JETTY_REQUEST_HEADER_SIZE);
   }
@@ -820,6 +840,10 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return getRelativeDir(ConfVars.ZEPPELIN_K8S_TEMPLATE_DIR);
   }
 
+  public String getK8sServiceName() {
+    return getString(ConfVars.ZEPPELIN_K8S_SERVICE_NAME);
+  }
+
   public String getDockerContainerImage() {
     return getString(ConfVars.ZEPPELIN_DOCKER_CONTAINER_IMAGE);
   }
@@ -870,6 +894,10 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_SSL_KEYSTORE_TYPE("zeppelin.ssl.keystore.type", "JKS"),
     ZEPPELIN_SSL_KEYSTORE_PASSWORD("zeppelin.ssl.keystore.password", ""),
     ZEPPELIN_SSL_KEY_MANAGER_PASSWORD("zeppelin.ssl.key.manager.password", null),
+    ZEPPELIN_SSL_PEM_KEY("zeppelin.ssl.pem.key", null),
+    ZEPPELIN_SSL_PEM_KEY_PASSWORD("zeppelin.ssl.pem.key.password", ""),
+    ZEPPELIN_SSL_PEM_CERT("zeppelin.ssl.pem.cert", null),
+    ZEPPELIN_SSL_PEM_CA("zeppelin.ssl.pem.ca", null),
     ZEPPELIN_SSL_TRUSTSTORE_PATH("zeppelin.ssl.truststore.path", null),
     ZEPPELIN_SSL_TRUSTSTORE_TYPE("zeppelin.ssl.truststore.type", null),
     ZEPPELIN_SSL_TRUSTSTORE_PASSWORD("zeppelin.ssl.truststore.password", null),
@@ -959,6 +987,7 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_SERVER_DEFAULT_DIR_ALLOWED("zeppelin.server.default.dir.allowed", false),
     ZEPPELIN_SERVER_XFRAME_OPTIONS("zeppelin.server.xframe.options", "SAMEORIGIN"),
     ZEPPELIN_SERVER_JETTY_NAME("zeppelin.server.jetty.name", " "),
+    ZEPPELIN_SERVER_SEND_JETTY_NAME("zeppelin.server.send.jetty.name", true),
     ZEPPELIN_SERVER_JETTY_THREAD_POOL_MAX("zeppelin.server.jetty.thread.pool.max", 400),
     ZEPPELIN_SERVER_JETTY_THREAD_POOL_MIN("zeppelin.server.jetty.thread.pool.min", 8),
     ZEPPELIN_SERVER_JETTY_THREAD_POOL_TIMEOUT("zeppelin.server.jetty.thread.pool.timeout", 30),
@@ -999,6 +1028,7 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_K8S_CONTAINER_IMAGE("zeppelin.k8s.container.image", "apache/zeppelin:" + Util.getVersion()),
     ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE("zeppelin.k8s.spark.container.image", "apache/spark:latest"),
     ZEPPELIN_K8S_TEMPLATE_DIR("zeppelin.k8s.template.dir", "k8s"),
+    ZEPPELIN_K8S_SERVICE_NAME("zeppelin.k8s.service.name", "zeppelin-server"),
 
     ZEPPELIN_DOCKER_CONTAINER_IMAGE("zeppelin.docker.container.image", "apache/zeppelin:" + Util.getVersion()),
 

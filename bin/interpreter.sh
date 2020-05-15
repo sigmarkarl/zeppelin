@@ -17,8 +17,8 @@
 #
 
 
-bin=$(dirname "${BASH_SOURCE-$0}")
-bin=$(cd "${bin}">/dev/null; pwd)
+bin="$(dirname "${BASH_SOURCE-$0}")"
+bin="$(cd "${bin}">/dev/null; pwd)"
 
 function usage() {
     echo "usage) $0 -p <port> -r <intp_port> -d <interpreter dir to load> -l <local interpreter repo dir to load> -g <interpreter group name>"
@@ -91,6 +91,9 @@ if [ -z "${PORT}" ] || [ -z "${INTERPRETER_DIR}" ]; then
 fi
 
 . "${bin}/common.sh"
+
+check_java_version
+
 
 ZEPPELIN_INTERPRETER_API_JAR=$(find "${ZEPPELIN_HOME}/interpreter" -name 'zeppelin-interpreter-shaded-*.jar')
 ZEPPELIN_INTP_CLASSPATH="${CLASSPATH}:${ZEPPELIN_INTERPRETER_API_JAR}"
@@ -233,6 +236,10 @@ elif [[ "${INTERPRETER_ID}" == "flink" ]]; then
 
   if [[ -n "${HADOOP_CONF_DIR}" ]] && [[ -d "${HADOOP_CONF_DIR}" ]]; then
     ZEPPELIN_INTP_CLASSPATH+=":${HADOOP_CONF_DIR}"
+    if ! [ -x "$(command -v hadoop)" ]; then
+      echo 'Error: hadoop is not in PATH when HADOOP_CONF_DIR is specified.'
+      exit 1
+    fi
     ZEPPELIN_INTP_CLASSPATH+=":`hadoop classpath`"
     export HADOOP_CONF_DIR=${HADOOP_CONF_DIR}
   else

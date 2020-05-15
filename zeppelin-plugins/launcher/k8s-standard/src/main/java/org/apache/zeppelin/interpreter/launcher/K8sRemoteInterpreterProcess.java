@@ -14,7 +14,6 @@ import com.hubspot.jinjava.Jinjava;
 import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterProcess;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
 import org.slf4j.Logger;
@@ -31,7 +30,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
   private final String containerImage;
   private final Properties properties;
   private final Map<String, String> envs;
-  private final String zeppelinServiceHost;
+  private final String zeppelinService;
   private final String zeppelinServiceRpcPort;
 
   private final Gson gson = new Gson();
@@ -45,6 +44,12 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
   private String userName;
 
   private AtomicBoolean started = new AtomicBoolean(false);
+  private Random rand = new Random();
+
+  private static final String SPARK_DRIVER_MEMROY = "spark.driver.memory";
+  private static final String SPARK_DRIVER_MEMROY_OVERHEAD = "spark.driver.memoryOverhead";
+  private static final String SPARK_DRIVER_CORES = "spark.driver.cores";
+  private static final String ENV_SERVICE_DOMAIN = "SERVICE_DOMAIN";
 
   public K8sRemoteInterpreterProcess(
           Kubectl kubectl,
@@ -55,7 +60,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
           String interpreterSettingName,
           Properties properties,
           Map<String, String> envs,
-          String zeppelinServiceHost,
+          String zeppelinService,
           String zeppelinServiceRpcPort,
           boolean portForward,
           String sparkImage,
@@ -71,7 +76,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
     this.interpreterSettingName = interpreterSettingName;
     this.properties = properties;
     this.envs = new HashMap<>(envs);
-    this.zeppelinServiceHost = zeppelinServiceHost;
+    this.zeppelinService = zeppelinService;
     this.zeppelinServiceRpcPort = zeppelinServiceRpcPort;
     this.portForward = portForward;
     this.sparkImage = sparkImage;
@@ -266,7 +271,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
     k8sProperties.put("zeppelin.k8s.interpreter.setting.name", interpreterSettingName);
     k8sProperties.put("zeppelin.k8s.interpreter.localRepo", "/tmp/local-repo");
     k8sProperties.put("zeppelin.k8s.interpreter.rpc.portRange", String.format("%d:%d", getPort(), getPort()));
-    k8sProperties.put("zeppelin.k8s.server.rpc.host", zeppelinServiceHost);
+    k8sProperties.put("zeppelin.k8s.server.rpc.service", zeppelinService);
     k8sProperties.put("zeppelin.k8s.server.rpc.portRange", zeppelinServiceRpcPort);
     if (ownerUID() != null && ownerName() != null) {
       k8sProperties.put("zeppelin.k8s.server.uid", ownerUID());
@@ -274,7 +279,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
     }
 
     // environment variables
-    envs.put("SERVICE_DOMAIN", envs.getOrDefault("SERVICE_DOMAIN", System.getenv("SERVICE_DOMAIN")));
+    envs.put(ENV_SERVICE_DOMAIN, envs.getOrDefault(ENV_SERVICE_DOMAIN, System.getenv(ENV_SERVICE_DOMAIN)));
     envs.put("ZEPPELIN_HOME", envs.getOrDefault("ZEPPELIN_HOME", "/zeppelin"));
 
     if (isSpark()) {
@@ -287,7 +292,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
 
       // configure interpreter property "zeppelin.spark.uiWebUrl" if not defined, to enable spark ui through reverse proxy
       String webUrl = (String) properties.get("zeppelin.spark.uiWebUrl");
-      if (webUrl == null || webUrl.trim().isEmpty()) {
+      if (StringUtils.isBlank(webUrl)) {
         webUrl = "//{{PORT}}-{{SERVICE_NAME}}.{{SERVICE_DOMAIN}}";
       }
       properties.put("zeppelin.spark.uiWebUrl",
@@ -295,8 +300,22 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
               webUrl,
               webUiPort,
               getPodName(),
-              envs.get("SERVICE_DOMAIN")
+              envs.get(ENV_SERVICE_DOMAIN)
           ));
+      // Resources of Interpreter Pod
+      if (properties.containsKey(SPARK_DRIVER_MEMROY)) {
+        String memory;
+        if (properties.containsKey(SPARK_DRIVER_MEMROY_OVERHEAD)) {
+          memory = K8sUtils.calculateSparkMemory(properties.getProperty(SPARK_DRIVER_MEMROY),
+                                                 properties.getProperty(SPARK_DRIVER_MEMROY_OVERHEAD));
+        } else {
+          memory = K8sUtils.calculateMemoryWithDefaultOverhead(properties.getProperty(SPARK_DRIVER_MEMROY));
+        }
+        k8sProperties.put("zeppelin.k8s.interpreter.memory", memory);
+      }
+      if (properties.containsKey(SPARK_DRIVER_CORES)) {
+        k8sProperties.put("zeppelin.k8s.interpreter.cores", properties.getProperty(SPARK_DRIVER_CORES));
+      }
     }
 
     k8sProperties.put("zeppelin.k8s.envs", envs);
@@ -311,7 +330,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
     ImmutableMap<String, Object> binding = ImmutableMap.of(
         "PORT", port,
         "SERVICE_NAME", serviceName,
-        "SERVICE_DOMAIN", serviceDomain
+        ENV_SERVICE_DOMAIN, serviceDomain
     );
 
     ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
@@ -340,8 +359,8 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
 
     options.append(" --master k8s://https://kubernetes.default.svc");
     options.append(" --deploy-mode client");
-    if (properties.containsKey("spark.driver.memory")) {
-      options.append(" --driver-memory " + properties.get("spark.driver.memory"));
+    if (properties.containsKey(SPARK_DRIVER_MEMROY)) {
+      options.append(" --driver-memory " + properties.get(SPARK_DRIVER_MEMROY));
     }
     if (userName != null) {
       options.append(" --proxy-user " + userName);
@@ -399,9 +418,8 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
     char[] chars = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 
     StringBuilder sb = new StringBuilder();
-    Random random = new Random();
     for (int i = 0; i < length; i++) {
-      char c = chars[random.nextInt(chars.length)];
+      char c = chars[rand.nextInt(chars.length)];
       sb.append(c);
     }
     return sb.toString();
