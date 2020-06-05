@@ -747,7 +747,8 @@ public class Note implements JsonSerializable {
     }
   }
 
-  public void runAll(AuthenticationInfo authenticationInfo, boolean blocking) throws Exception {
+  public void runAll(AuthenticationInfo authenticationInfo,
+                     boolean blocking) throws Exception {
     setRunning(true);
     try {
       for (Paragraph p : getParagraphs()) {
@@ -755,6 +756,17 @@ public class Note implements JsonSerializable {
           continue;
         }
         p.setAuthenticationInfo(authenticationInfo);
+        try {
+          Interpreter interpreter = p.getBindedInterpreter();
+          if (interpreter != null) {
+            // set interpreter property to execution.mode to be note
+            // so that it could use the correct scheduler. see ZEPPELIN-4832
+            interpreter.setProperty(".execution.mode", "note");
+            interpreter.setProperty(".noteId", id);
+          }
+        } catch (InterpreterNotFoundException e) {
+          // ignore, because the following run method will fail if interpreter not found.
+        }
         if (!run(p.getId(), blocking)) {
           logger.warn("Skip running the remain notes because paragraph {} fails", p.getId());
           throw new Exception("Fail to run note because paragraph " + p.getId() + " is failed, " +
@@ -780,14 +792,16 @@ public class Note implements JsonSerializable {
   }
 
   /**
-   * Run a single paragraph
+   * Run a single paragraph. Return true only when paragraph run successfully.
    *
    * @param paragraphId
    * @param blocking
    * @param ctxUser
    * @return
    */
-  public boolean run(String paragraphId, boolean blocking, String ctxUser) {
+  public boolean run(String paragraphId,
+                     boolean blocking,
+                     String ctxUser) {
     Paragraph p = getParagraph(paragraphId);
 
     if (isPersonalizedMode() && ctxUser != null)

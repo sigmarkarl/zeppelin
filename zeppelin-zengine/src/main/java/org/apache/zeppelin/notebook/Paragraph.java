@@ -347,6 +347,11 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
     return checkEmptyConfig && Strings.isNullOrEmpty(scriptText) && localProperties.isEmpty();
   }
 
+  /**
+   * Return true only when paragraph run successfully with state of FINISHED.
+   * @param blocking
+   * @return
+   */
   public boolean execute(boolean blocking) {
     try {
       this.interpreter = getBindedInterpreter();
@@ -699,6 +704,14 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
     this.results = new InterpreterResult(Code.SUCCESS);
     for (InterpreterResultMessage buffer : outputBuffer) {
       results.add(buffer);
+    }
+  }
+
+  @VisibleForTesting
+  public void waitUntilFinished() throws Exception {
+    while(!isTerminated()) {
+      LOGGER.debug("Wait for paragraph to be finished");
+      Thread.sleep(1000);
     }
   }
 
