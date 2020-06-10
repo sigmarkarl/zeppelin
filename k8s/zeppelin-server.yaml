@@ -29,7 +29,7 @@ data:
   # If you have your ingress controller configured to connect to `zeppelin-server` service and have a domain name for it (with wildcard subdomain point the same address), you can replace serviceDomain field with your own domain.
   SERVICE_DOMAIN: local.zeppelin-project.org:8080
   ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE: nextcode/spark:3.0.0-preview2
-  ZEPPELIN_K8S_CONTAINER_IMAGE: apache/zeppelin:0.9.0-SNAPSHOT
+  ZEPPELIN_K8S_CONTAINER_IMAGE: apache/zeppelin:0.9.0
   ZEPPELIN_HOME: /zeppelin
   ZEPPELIN_SERVER_RPC_PORTRANGE: 12320:12320
   # default value of 'master' property for spark interpreter.
@@ -113,9 +113,13 @@ spec:
           items:
           - key: nginx.conf
             path: nginx.conf
+      - name: zeppelin-root
+        hostPath:
+          path: /Users/sigmar/zeppelin
+          type: Directory
       containers:
       - name: zeppelin-server
-        image: apache/zeppelin:0.9.0-SNAPSHOT
+        image: apache/zeppelin:0.9.0
         command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
         lifecycle:
           preStop:
@@ -143,13 +147,22 @@ spec:
         envFrom:
         - configMapRef:
             name: zeppelin-server-conf-map
-      # volumeMounts:
+        volumeMounts:
       #  - name: zeppelin-server-notebook-volume     # configure this to persist notebook
       #    mountPath: /zeppelin/notebook
       #  - name: zeppelin-server-conf                # configure this to persist Zeppelin configuration
       #    mountPath: /zeppelin/conf
       #  - name: zeppelin-server-custom-k8s          # configure this to mount customized Kubernetes spec for interpreter
       #    mountPath: /zeppelin/k8s
+        - name: zeppelin-root
+          mountPath: /zeppelin/k8s
+          subPath: k8s
+        - name: zeppelin-root
+          mountPath: /zeppelin/bin
+          subPath: bin
+        #- name: zeppelin-root
+        #  mountPath: /zeppelin/conf
+        #  subPath: conf
       - name: zeppelin-server-gateway
         image: nginx:1.14.0
         command: ["/bin/sh", "-c"]

@@ -24,6 +24,8 @@ function usage() {
     echo "usage) $0 -p <port> -r <intp_port> -d <interpreter dir to load> -l <local interpreter repo dir to load> -g <interpreter group name>"
 }
 
+echo "hohoho"
+
 # pre-requisites for checking that we're running in container
 if [ -f /proc/self/cgroup ] && [ -n "$(command -v getent)" ]; then
     # checks if we're running in container...
