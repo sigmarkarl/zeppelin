@@ -18,7 +18,7 @@
 
 package org.apache.zeppelin.flink
 
-import java.io.{BufferedReader, File}
+import java.io.{BufferedReader, File, IOException}
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
 import java.util.Properties
@@ -28,7 +28,6 @@ import java.util.jar.JarFile
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.flink.api.common.JobExecutionResult
-import org.apache.flink.api.scala.FlinkShell.{ExecutionMode, _}
 import org.apache.flink.api.scala.{ExecutionEnvironment, FlinkILoop}
 import org.apache.flink.client.program.ClusterClient
 import org.apache.flink.configuration._
@@ -48,6 +47,7 @@ import org.apache.flink.table.module.ModuleManager
 import org.apache.flink.table.module.hive.HiveModule
 import org.apache.flink.yarn.cli.FlinkYarnSessionCli
 import org.apache.zeppelin.flink.util.DependencyUtils
+import org.apache.zeppelin.flink.FlinkShell._
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion
 import org.apache.zeppelin.interpreter.util.InterpreterOutputStream
 import org.apache.zeppelin.interpreter.{InterpreterContext, InterpreterException, InterpreterHookRegistry, InterpreterResult}
@@ -100,10 +100,12 @@ class FlinkScalaInterpreter(val properties: Properties) {
   private var flinkVersion: FlinkVersion = _
   private var flinkShims: FlinkShims = _
   private var jmWebUrl: String = _
+  private var replacedJMWebUrl: String = _
   private var jobManager: JobManager = _
   private var defaultParallelism = 1
   private var defaultSqlParallelism = 1
   private var userJars: Seq[String] = _
+  private var userUdfJars: Seq[String] = _
 
   def open(): Unit = {
     val config = initFlinkConfig()
@@ -118,7 +120,7 @@ class FlinkScalaInterpreter(val properties: Properties) {
     modifiers.add("@transient")
     this.bind("z", z.getClass().getCanonicalName(), z, modifiers);
 
-    this.jobManager = new JobManager(this.z, jmWebUrl)
+    this.jobManager = new JobManager(this.z, jmWebUrl, replacedJMWebUrl)
 
     // register JobListener
     val jobListener = new FlinkJobListener()
@@ -134,20 +136,15 @@ class FlinkScalaInterpreter(val properties: Properties) {
     }
 
     // load udf jar
-    val udfJars = properties.getProperty("flink.udf.jars", "")
-    if (!StringUtils.isBlank(udfJars)) {
-      udfJars.split(",").foreach(jar => {
-        loadUDFJar(jar)
-      })
-    }
+    this.userUdfJars.foreach(jar => loadUDFJar(jar))
   }
 
   private def initFlinkConfig(): Config = {
-    val flinkHome = properties.getProperty("FLINK_HOME", sys.env.getOrElse("FLINK_HOME", ""))
-    val flinkConfDir = properties.getProperty("FLINK_CONF_DIR", sys.env.getOrElse("FLINK_CONF_DIR", ""))
-    val hadoopConfDir = properties.getProperty("HADOOP_CONF_DIR", sys.env.getOrElse("HADOOP_CONF_DIR", ""))
-    val yarnConfDir = properties.getProperty("YARN_CONF_DIR", sys.env.getOrElse("YARN_CONF_DIR", ""))
-    val hiveConfDir = properties.getProperty("HIVE_CONF_DIR", sys.env.getOrElse("HIVE_CONF_DIR", ""))
+    val flinkHome = sys.env.getOrElse("FLINK_HOME", "")
+    val flinkConfDir = sys.env.getOrElse("FLINK_CONF_DIR", "")
+    val hadoopConfDir = sys.env.getOrElse("HADOOP_CONF_DIR", "")
+    val yarnConfDir = sys.env.getOrElse("YARN_CONF_DIR", "")
+    val hiveConfDir = sys.env.getOrElse("HIVE_CONF_DIR", "")
     LOGGER.info("FLINK_HOME: " + flinkHome)
     LOGGER.info("FLINK_CONF_DIR: " + flinkConfDir)
     LOGGER.info("HADOOP_CONF_DIR: " + hadoopConfDir)
@@ -189,7 +186,8 @@ class FlinkScalaInterpreter(val properties: Properties) {
       Some(ensureYarnConfig(config)
         .copy(queue = Some(queue))))
 
-    this.userJars = getUserJars
+    this.userUdfJars = getUserUdfJars()
+    this.userJars = getUserJarsExceptUdfJars ++ this.userUdfJars
     LOGGER.info("UserJars: " + userJars.mkString(","))
     config = config.copy(externalJars = Some(userJars.toArray))
     LOGGER.info("Config: " + config)
@@ -247,7 +245,7 @@ class FlinkScalaInterpreter(val properties: Properties) {
         }
       }
 
-      val (effectiveConfig, cluster) = fetchConnectionInfo(config, configuration)
+      val (effectiveConfig, cluster) = fetchConnectionInfo(config, configuration, flinkShims)
       this.configuration = effectiveConfig
       cluster match {
         case Some(clusterClient) =>
@@ -259,6 +257,11 @@ class FlinkScalaInterpreter(val properties: Properties) {
             LOGGER.info("Starting FlinkCluster in yarn mode")
             if (properties.getProperty("flink.webui.yarn.useProxy", "false").toBoolean) {
               this.jmWebUrl = HadoopUtils.getYarnAppTrackingUrl(clusterClient)
+              // for some cloud vender, the yarn address may be mapped to some other address.
+              val yarnAddress = properties.getProperty("flink.webui.yarn.address")
+              if (!StringUtils.isBlank(yarnAddress)) {
+                this.replacedJMWebUrl = replaceYarnAddress(this.jmWebUrl, yarnAddress)
+              }
             } else {
               this.jmWebUrl = clusterClient.getWebInterfaceURL
             }
@@ -272,6 +275,9 @@ class FlinkScalaInterpreter(val properties: Properties) {
       }
 
       LOGGER.info(s"\nConnecting to Flink cluster: " + this.jmWebUrl)
+      if (InterpreterContext.get() != null) {
+        InterpreterContext.get().getIntpEventClient.sendWebUrlInfo(this.jmWebUrl)
+      }
       LOGGER.info("externalJars: " +
         config.externalJars.getOrElse(Array.empty[String]).mkString(":"))
       val classLoader = Thread.currentThread().getContextClassLoader
@@ -392,27 +398,27 @@ class FlinkScalaInterpreter(val properties: Properties) {
 
       // blink planner
       var btEnvSetting = EnvironmentSettings.newInstance().inBatchMode().useBlinkPlanner().build()
-      this.btenv = tblEnvFactory.createJavaBlinkBatchTableEnvironment(btEnvSetting);
+      this.btenv = tblEnvFactory.createJavaBlinkBatchTableEnvironment(btEnvSetting, getFlinkClassLoader);
       flinkILoop.bind("btenv", btenv.getClass().getCanonicalName(), btenv, List("@transient"))
       this.java_btenv = this.btenv
 
       var stEnvSetting =
         EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build()
-      this.stenv = tblEnvFactory.createScalaBlinkStreamTableEnvironment(stEnvSetting)
+      this.stenv = tblEnvFactory.createScalaBlinkStreamTableEnvironment(stEnvSetting, getFlinkClassLoader)
       flinkILoop.bind("stenv", stenv.getClass().getCanonicalName(), stenv, List("@transient"))
-      this.java_stenv = tblEnvFactory.createJavaBlinkStreamTableEnvironment(stEnvSetting)
+      this.java_stenv = tblEnvFactory.createJavaBlinkStreamTableEnvironment(stEnvSetting, getFlinkClassLoader)
 
       // flink planner
       this.btenv_2 = tblEnvFactory.createScalaFlinkBatchTableEnvironment()
       flinkILoop.bind("btenv_2", btenv_2.getClass().getCanonicalName(), btenv_2, List("@transient"))
       stEnvSetting =
         EnvironmentSettings.newInstance().inStreamingMode().useOldPlanner().build()
-      this.stenv_2 = tblEnvFactory.createScalaFlinkStreamTableEnvironment(stEnvSetting)
+      this.stenv_2 = tblEnvFactory.createScalaFlinkStreamTableEnvironment(stEnvSetting, getFlinkClassLoader)
       flinkILoop.bind("stenv_2", stenv_2.getClass().getCanonicalName(), stenv_2, List("@transient"))
 
       this.java_btenv_2 = tblEnvFactory.createJavaFlinkBatchTableEnvironment()
       btEnvSetting = EnvironmentSettings.newInstance.useOldPlanner.inStreamingMode.build
-      this.java_stenv_2 = tblEnvFactory.createJavaFlinkStreamTableEnvironment(btEnvSetting)
+      this.java_stenv_2 = tblEnvFactory.createJavaFlinkStreamTableEnvironment(btEnvSetting, getFlinkClassLoader)
     } finally {
       Thread.currentThread().setContextClassLoader(originalClassLoader)
     }
@@ -455,7 +461,9 @@ class FlinkScalaInterpreter(val properties: Properties) {
     this.btenv.registerCatalog("hive", hiveCatalog)
     this.btenv.useCatalog("hive")
     this.btenv.useDatabase(database)
-    this.btenv.loadModule("hive", new HiveModule(hiveVersion))
+    if (properties.getProperty("zeppelin.flink.module.enableHive", "false").toBoolean) {
+      this.btenv.loadModule("hive", new HiveModule(hiveVersion))
+    }
   }
 
   private def loadUDFJar(jar: String): Unit = {
@@ -463,8 +471,9 @@ class FlinkScalaInterpreter(val properties: Properties) {
     val jarFile = new JarFile(jar)
     val entries = jarFile.entries
 
+    val udfPackages = properties.getProperty("flink.udf.jars.packages", "").split(",").toSet
     val urls = Array(new URL("jar:file:" + jar + "!/"))
-    val cl = new URLClassLoader(urls)
+    val cl = new URLClassLoader(urls, getFlinkScalaShellLoader)
 
     while (entries.hasMoreElements) {
       val je = entries.nextElement
@@ -473,25 +482,27 @@ class FlinkScalaInterpreter(val properties: Properties) {
           // -6 because of .class
           var className = je.getName.substring(0, je.getName.length - 6)
           className = className.replace('/', '.')
-          val c = cl.loadClass(className)
-          val udf = c.newInstance()
-          if (udf.isInstanceOf[ScalarFunction]) {
-            val scalarUDF = udf.asInstanceOf[ScalarFunction]
-            btenv.registerFunction(c.getSimpleName, scalarUDF)
-          } else if (udf.isInstanceOf[TableFunction[_]]) {
-            val tableUDF = udf.asInstanceOf[TableFunction[_]]
-            flinkShims.registerTableFunction(btenv, c.getSimpleName, tableUDF)
-          } else if (udf.isInstanceOf[AggregateFunction[_,_]]) {
-            val aggregateUDF = udf.asInstanceOf[AggregateFunction[_,_]]
-            flinkShims.registerAggregateFunction(btenv, c.getSimpleName, aggregateUDF)
-          } else if (udf.isInstanceOf[TableAggregateFunction[_,_]]) {
-            val tableAggregateUDF = udf.asInstanceOf[TableAggregateFunction[_,_]]
-            flinkShims.registerTableAggregateFunction(btenv, c.getSimpleName, tableAggregateUDF)
-          } else {
-            LOGGER.warn("No UDF definition found in class file: " + je.getName)
+          if (udfPackages.isEmpty || udfPackages.exists( p => className.startsWith(p))) {
+            val c = cl.loadClass(className)
+            val udf = c.newInstance()
+            if (udf.isInstanceOf[ScalarFunction]) {
+              val scalarUDF = udf.asInstanceOf[ScalarFunction]
+              btenv.registerFunction(c.getSimpleName, scalarUDF)
+            } else if (udf.isInstanceOf[TableFunction[_]]) {
+              val tableUDF = udf.asInstanceOf[TableFunction[_]]
+              flinkShims.registerTableFunction(btenv, c.getSimpleName, tableUDF)
+            } else if (udf.isInstanceOf[AggregateFunction[_, _]]) {
+              val aggregateUDF = udf.asInstanceOf[AggregateFunction[_, _]]
+              flinkShims.registerAggregateFunction(btenv, c.getSimpleName, aggregateUDF)
+            } else if (udf.isInstanceOf[TableAggregateFunction[_, _]]) {
+              val tableAggregateUDF = udf.asInstanceOf[TableAggregateFunction[_, _]]
+              flinkShims.registerTableAggregateFunction(btenv, c.getSimpleName, tableAggregateUDF)
+            } else {
+              LOGGER.warn("No UDF definition found in class file: " + je.getName)
+            }
           }
         } catch {
-          case e : Exception =>
+          case e : Throwable =>
             LOGGER.info("Fail to inspect udf class: " + je.getName, e)
         }
       }
@@ -631,6 +642,18 @@ class FlinkScalaInterpreter(val properties: Properties) {
 
   def setSavePointIfNecessary(context: InterpreterContext): Unit = {
     val savepointDir = context.getLocalProperties.get("savepointDir")
+    val savepointPath = context.getLocalProperties.get("savepointPath");
+
+    if (!StringUtils.isBlank(savepointPath)){
+      LOGGER.info("savepointPath has been setup by user , savepointPath = {}", savepointPath)
+      configuration.setString("execution.savepoint.path", savepointPath)
+      return
+    } else if ("".equals(savepointPath)) {
+      LOGGER.info("savepointPath is empty, remove execution.savepoint.path")
+      configuration.removeConfig(SavepointConfigOptions.SAVEPOINT_PATH);
+      return;
+    }
+
     if (!StringUtils.isBlank(savepointDir)) {
       val savepointPath = z.angular(context.getParagraphId + "_savepointpath", context.getNoteId, null)
       if (savepointPath == null) {
@@ -641,9 +664,6 @@ class FlinkScalaInterpreter(val properties: Properties) {
         LOGGER.info("Set savepointPath to: " + savepointPath.toString)
         configuration.setString("execution.savepoint.path", savepointPath.toString)
       }
-    } else {
-      // remove the SAVEPOINT_PATH which may be set by last job.
-      configuration.removeConfig(SavepointConfigOptions.SAVEPOINT_PATH)
     }
   }
 
@@ -741,17 +761,10 @@ class FlinkScalaInterpreter(val properties: Properties) {
 
   def getDefaultSqlParallelism = this.defaultSqlParallelism
 
-  def getUserJars: Seq[String] = {
+  private def getUserJarsExceptUdfJars: Seq[String] = {
     val flinkJars =
       if (!StringUtils.isBlank(properties.getProperty("flink.execution.jars", ""))) {
-        properties.getProperty("flink.execution.jars").split(",").toSeq
-      } else {
-        Seq.empty[String]
-      }
-
-    val flinkUDFJars =
-      if (!StringUtils.isBlank(properties.getProperty("flink.udf.jars", ""))) {
-        properties.getProperty("flink.udf.jars").split(",").toSeq
+        getOrDownloadJars(properties.getProperty("flink.execution.jars").split(",").toSeq)
       } else {
         Seq.empty[String]
       }
@@ -764,7 +777,30 @@ class FlinkScalaInterpreter(val properties: Properties) {
         Seq.empty[String]
       }
 
-    flinkJars ++ flinkPackageJars ++ flinkUDFJars
+    flinkJars ++ flinkPackageJars
+  }
+
+  private def getUserUdfJars(): Seq[String] = {
+    if (!StringUtils.isBlank(properties.getProperty("flink.udf.jars", ""))) {
+      getOrDownloadJars(properties.getProperty("flink.udf.jars").split(",").toSeq)
+    } else {
+      Seq.empty[String]
+    }
+  }
+
+  private def getOrDownloadJars(jars: Seq[String]): Seq[String] = {
+    jars.map(jar => {
+      if (jar.contains("://")) {
+        HadoopUtils.downloadJar(jar)
+      } else {
+        val jarFile = new File(jar)
+        if (!jarFile.exists() || !jarFile.isFile) {
+          throw new Exception(s"jar file: ${jar} doesn't exist")
+        } else {
+          jar
+        }
+      }
+    })
   }
 
   def getJobManager = this.jobManager
@@ -828,6 +864,12 @@ class FlinkScalaInterpreter(val properties: Properties) {
         }
       }
     }
+  }
+
+  def replaceYarnAddress(webURL: String, yarnAddress: String): String = {
+    val pattern = "(https?://.*:\\d+)(.*)".r
+    val pattern(prefix, remaining) = webURL
+    yarnAddress + remaining
   }
 }
 

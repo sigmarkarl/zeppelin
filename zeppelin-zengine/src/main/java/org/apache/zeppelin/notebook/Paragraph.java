@@ -28,10 +28,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.zeppelin.common.JsonSerializable;
 import org.apache.zeppelin.display.AngularObject;
@@ -41,17 +39,15 @@ import org.apache.zeppelin.display.Input;
 import org.apache.zeppelin.helium.HeliumPackage;
 import org.apache.zeppelin.interpreter.Constants;
 import org.apache.zeppelin.interpreter.ExecutionContext;
+import org.apache.zeppelin.interpreter.ExecutionContextBuilder;
 import org.apache.zeppelin.interpreter.Interpreter;
 import org.apache.zeppelin.interpreter.Interpreter.FormType;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterNotFoundException;
-import org.apache.zeppelin.interpreter.InterpreterOutput;
-import org.apache.zeppelin.interpreter.InterpreterOutputListener;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.interpreter.InterpreterResult.Code;
 import org.apache.zeppelin.interpreter.InterpreterResultMessage;
-import org.apache.zeppelin.interpreter.InterpreterResultMessageOutput;
 import org.apache.zeppelin.interpreter.InterpreterSetting;
 import org.apache.zeppelin.interpreter.ManagedInterpreterGroup;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreter;
@@ -194,40 +190,10 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
     // parse text to get interpreter component
     if (this.text != null) {
       // clean localProperties, otherwise previous localProperties will be used for the next run
-      this.localProperties.clear();
-      Matcher matcher = REPL_PATTERN.matcher(this.text);
-      if (matcher.matches()) {
-        String headingSpace = matcher.group(1);
-        setIntpText(matcher.group(2));
-
-        if (matcher.groupCount() == 3 && matcher.group(3) != null) {
-          String localPropertiesText = matcher.group(3);
-          String[] splits = localPropertiesText.substring(1, localPropertiesText.length() -1)
-              .split(",");
-          for (String split : splits) {
-            String[] kv = split.split("=");
-            if (StringUtils.isBlank(split) || kv.length == 0) {
-              continue;
-            }
-            if (kv.length > 2) {
-              throw new RuntimeException("Invalid paragraph properties format: " + split);
-            }
-            if (kv.length == 1) {
-              localProperties.put(kv[0].trim(), kv[0].trim());
-            } else {
-              localProperties.put(kv[0].trim(), kv[1].trim());
-            }
-          }
-          this.scriptText = this.text.substring(headingSpace.length() + intpText.length() +
-              localPropertiesText.length() + 1).trim();
-        } else {
-          this.scriptText = this.text.substring(headingSpace.length() + intpText.length() + 1).trim();
-        }
-        config.putAll(localProperties);
-      } else {
-        setIntpText("");
-        this.scriptText = this.text.trim();
-      }
+      ParagraphTextParser.ParseResult result = ParagraphTextParser.parse(this.text);
+      localProperties = result.getLocalProperties();
+      setIntpText(result.getIntpText());
+      this.scriptText = result.getScriptText();
     }
   }
 
@@ -276,9 +242,15 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
   }
 
   public Interpreter getBindedInterpreter() throws InterpreterNotFoundException {
-    return this.note.getInterpreterFactory().getInterpreter(intpText,
-        new ExecutionContext(user, note.getId(),
-                note.getDefaultInterpreterGroup(), note.isCronMode()));
+    ExecutionContext executionContext = new ExecutionContextBuilder()
+            .setUser(user)
+            .setNoteId(note.getId())
+            .setDefaultInterpreterGroup(note.getDefaultInterpreterGroup())
+            .setInIsolatedMode(note.isIsolatedMode())
+            .setStartTime(note.getStartTime())
+            .createExecutionContext();
+
+    return this.note.getInterpreterFactory().getInterpreter(intpText, executionContext);
   }
 
   public void setInterpreter(Interpreter interpreter) {
@@ -529,10 +501,13 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
   private InterpreterContext getInterpreterContext() {
     AngularObjectRegistry registry = null;
     ResourcePool resourcePool = null;
-
+    String replName = null;
     if (this.interpreter != null) {
       registry = this.interpreter.getInterpreterGroup().getAngularObjectRegistry();
       resourcePool = this.interpreter.getInterpreterGroup().getResourcePool();
+      InterpreterSetting interpreterSetting = ((ManagedInterpreterGroup)
+              interpreter.getInterpreterGroup()).getInterpreterSetting();
+      replName = interpreterSetting.getName();
     }
 
     Credentials credentials = note.getCredentials();
@@ -551,7 +526,7 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
             .setNoteId(note.getId())
             .setNoteName(note.getName())
             .setParagraphId(getId())
-            .setReplName(intpText)
+            .setReplName(replName)
             .setParagraphTitle(title)
             .setParagraphText(text)
             .setAuthenticationInfo(subject)
@@ -662,8 +637,14 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
 
   public boolean isValidInterpreter(String replName) {
     try {
-      return note.getInterpreterFactory().getInterpreter(replName,
-              new ExecutionContext(user, note.getId(), note.getDefaultInterpreterGroup())) != null;
+      ExecutionContext executionContext = new ExecutionContextBuilder()
+              .setUser(user)
+              .setNoteId(note.getId())
+              .setDefaultInterpreterGroup(note.getDefaultInterpreterGroup())
+              .setInIsolatedMode(note.isIsolatedMode())
+              .setStartTime(note.getStartTime())
+              .createExecutionContext();
+      return note.getInterpreterFactory().getInterpreter(replName, executionContext) != null;
     } catch (InterpreterNotFoundException e) {
       return false;
     }
@@ -780,11 +761,11 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
 
   @Override
   public String toJson() {
-    return Note.getGson().toJson(this);
+    return Note.getGSON().toJson(this);
   }
 
   public static Paragraph fromJson(String json) {
-    return Note.getGson().fromJson(json, Paragraph.class);
+    return Note.getGSON().fromJson(json, Paragraph.class);
   }
 
   public void updateOutputBuffer(int index, InterpreterResult.Type type, String output) {

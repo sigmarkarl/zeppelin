@@ -211,7 +211,6 @@ public abstract class AbstractStreamSqlJob {
       try {
         while (isRunning && iterator.hasNext()) {
           final Tuple2<Boolean, Row> change = iterator.next();
-          LOGGER.info(change.f0 + ", " + change.f1);
           processRecord(change);
         }
       } catch (Throwable e) {
@@ -222,7 +221,8 @@ public abstract class AbstractStreamSqlJob {
       // no result anymore
       // either the job is done or an error occurred
       isRunning = false;
-      LOGGER.info("ResultRetrieval Thread is done");
+      LOGGER.info("ResultRetrieval Thread is done, isRunning={}, hasNext={}",
+              isRunning, iterator.hasNext());
       LOGGER.info("Final Result: " + buildResult());
       refreshExecutorService.shutdownNow();
     }

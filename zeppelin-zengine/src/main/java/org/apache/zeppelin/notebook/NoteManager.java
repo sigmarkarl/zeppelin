@@ -30,9 +30,11 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Manager class for note. It handle all the note related operations, such as get, create,
@@ -86,17 +88,22 @@ public class NoteManager {
     return notesInfo;
   }
 
-  //TODO(zjffdu) This is inefficient
-  public List<Note> getAllNotes() {
-    List<Note> notes = new ArrayList<>();
-    for (String notePath : notesInfo.values()) {
-      try {
-        notes.add(getNoteNode(notePath).getNote());
-      } catch (Exception e) {
-        LOGGER.warn("Fail to load note: " + notePath, e);
-      }
-    }
-    return notes;
+  /**
+   * Return java stream instead of List to save memory, otherwise OOM will happen
+   * when there's large amount of notes.
+   * @return
+   */
+  public Stream<Note> getNotesStream() {
+    return notesInfo.values().stream()
+            .map(notePath -> {
+              try {
+                return getNoteNode(notePath).getNote();
+              } catch (Exception e) {
+                LOGGER.warn("Fail to load note: " + notePath, e);
+                return null;
+              }
+            })
+            .filter(note -> note != null);
   }
 
   /**
@@ -275,13 +282,13 @@ public class NoteManager {
    * @return return null if not found on NotebookRepo.
    * @throws IOException
    */
-  public Note getNote(String noteId, boolean forceLoad) throws IOException {
+  public Note getNote(String noteId, boolean reload) throws IOException {
     String notePath = this.notesInfo.get(noteId);
     if (notePath == null) {
       return null;
     }
     NoteNode noteNode = getNoteNode(notePath);
-    return noteNode.getNote(forceLoad);
+    return noteNode.getNote(reload);
   }
 
   /**
@@ -528,7 +535,7 @@ public class NoteManager {
     }
 
     public synchronized Note getNote() throws IOException {
-        return getNote(true);
+        return getNote(false);
     }
 
     /**
@@ -537,8 +544,8 @@ public class NoteManager {
      * @return
      * @throws IOException
      */
-    public synchronized Note getNote(boolean forceLoad) throws IOException {
-      if (!note.isLoaded() && forceLoad) {
+    public synchronized Note getNote(boolean reload) throws IOException {
+      if (!note.isLoaded() || reload) {
         note = notebookRepo.get(note.getId(), note.getPath(), AuthenticationInfo.ANONYMOUS);
         if (parent.toString().equals("/")) {
           note.setPath("/" + note.getName());

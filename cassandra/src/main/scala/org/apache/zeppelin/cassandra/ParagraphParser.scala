@@ -18,7 +18,6 @@ package org.apache.zeppelin.cassandra
 
 import com.datastax.oss.driver.api.core.{ConsistencyLevel, DefaultConsistencyLevel}
 import com.datastax.oss.driver.api.core.cql.{BatchType, DefaultBatchType}
-import org.apache.zeppelin.cassandra.CassandraInterpreter._
 import org.apache.zeppelin.interpreter.InterpreterException
 
 import scala.util.matching.Regex
@@ -48,10 +47,10 @@ object ParagraphParser {
   val REQUEST_TIMEOUT_PATTERN: Regex = """^\s*@requestTimeOut\s*=\s*([0-9]+)\s*$""".r
 
   val SIMPLE_STATEMENT_PATTERN: Regex = """([^;]+;)""".r
-  val PREPARE_STATEMENT_PATTERN: Regex = """^\s*@prepare\[([^]]+)\]\s*=\s*([^;]+)$""".r
-  val REMOVE_PREPARE_STATEMENT_PATTERN: Regex = """^\s*@remove_prepare\[([^]]+)\]\s*$""".r
+  val PREPARE_STATEMENT_PATTERN: Regex = """^\s*@prepare\[([^]]+)]\s*=\s*([^;]+)$""".r
+  val REMOVE_PREPARE_STATEMENT_PATTERN: Regex = """^\s*@remove_prepare\[([^]]+)]\s*$""".r
 
-  val BIND_PATTERN: Regex = """^\s*@bind\[([^]]+)\](?:=([^;]+))?""".r
+  val BIND_PATTERN: Regex = """^\s*@bind\[([^]]+)](?:=([^;]+))?""".r
   val BATCH_PATTERN: Regex = """^(?i)\s*BEGIN\s+(UNLOGGED|COUNTER)?\s*BATCH""".r
 
   /**
@@ -72,7 +71,7 @@ object ParagraphParser {
 
   val GENERIC_STATEMENT_PREFIX: Regex =
     """(?is)\s*(?:INSERT|UPDATE|DELETE|SELECT|CREATE|ALTER|
-      |DROP|GRANT|REVOKE|TRUNCATE|LIST|USE)\s+""".r
+      |DROP|GRANT|REVOKE|TRUNCATE|LIST|USE|[a-z]\w+)\s+""".r
 
   val VALID_IDENTIFIER = "[a-z][a-z0-9_]*"
 
@@ -144,7 +143,7 @@ class ParagraphParser extends RegexParsers{
   //Query parameters
   def consistency: Parser[Consistency] = """\s*@consistency.+""".r ^^ {x => extractConsistency(x.trim)}
   def serialConsistency: Parser[SerialConsistency] = """\s*@serialConsistency.+""".r ^^ {x => extractSerialConsistency(x.trim)}
-  def timestamp: Parser[Timestamp] = """\s*@timestamp.+""".r ^^ {x => extractTimestamp(x.trim)}
+  def timestamp: Parser[Timestamp] = """\s*@timestamp[^F].+""".r ^^ {x => extractTimestamp(x.trim)}
   def fetchSize: Parser[FetchSize] = """\s*@fetchSize.+""".r ^^ {x => extractFetchSize(x.trim)}
   def requestTimeOut: Parser[RequestTimeOut] = """\s*@requestTimeOut.+""".r ^^ {x => extractRequestTimeOut(x.trim)}
 
@@ -156,7 +155,6 @@ class ParagraphParser extends RegexParsers{
   def prepare(): Parser[PrepareStm] = """\s*@prepare.+""".r ^^ {x => extractPreparedStatement(x.trim)}
   def removePrepare(): Parser[RemovePrepareStm] = """\s*@remove_prepare.+""".r ^^ {x => extractRemovePreparedStatement(x.trim)}
   def bind(): Parser[BoundStm] = """\s*@bind.+""".r ^^ {x => extractBoundStatement(x.trim)}
-
 
   //Meta data
   private def describeCluster: Parser[DescribeClusterCmd] = """(?i)\s*(?:DESCRIBE|DESC)\s+CLUSTER.*""".r ^^ extractDescribeClusterCmd
@@ -190,14 +188,14 @@ class ParagraphParser extends RegexParsers{
   }
 
   def queries:Parser[List[AnyBlock]] = rep(singleLineComment | multiLineComment | consistency | serialConsistency |
-    timestamp | fetchSize | requestTimeOut | removePrepare | prepare | bind | batch | describeCluster |
+    timestamp | fetchSize | requestTimeOut | removePrepare | prepare | bind | batch |
     describeKeyspace | describeKeyspaces |
     describeTable | describeTables |
     describeType | describeTypes |
     describeFunction | describeFunctions |
     describeAggregate | describeAggregates |
     describeMaterializedView | describeMaterializedViews |
-    helpCommand | createFunctionStatement | genericStatement)
+    describeCluster | helpCommand | createFunctionStatement | genericStatement)
 
   def extractConsistency(text: String): Consistency = {
     text match {

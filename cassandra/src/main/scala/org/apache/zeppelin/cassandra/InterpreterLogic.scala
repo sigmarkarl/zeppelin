@@ -19,10 +19,10 @@ package org.apache.zeppelin.cassandra
 import java.io.{ByteArrayOutputStream, PrintStream}
 import java.net.InetAddress
 import java.nio.ByteBuffer
-import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Duration, Instant, LocalDateTime, ZoneOffset}
 import java.util
+import java.util.Properties
 import java.util.concurrent.ConcurrentHashMap
 
 import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, SetType, TupleType, UserDefinedType}
@@ -30,7 +30,7 @@ import com.datastax.oss.driver.api.core.`type`.DataTypes._
 import com.datastax.oss.driver.api.core.`type`.codec.TypeCodec
 import com.datastax.oss.driver.api.core.`type`.codec.registry.CodecRegistry
 import com.datastax.oss.driver.api.core.cql.{BatchStatement, BatchType, BatchableStatement, BoundStatement, ExecutionInfo, PreparedStatement, ResultSet, Row, SimpleStatement, Statement}
-import com.datastax.oss.driver.api.core.{ConsistencyLevel, CqlSession, DriverException, ProtocolVersion}
+import com.datastax.oss.driver.api.core.{ConsistencyLevel, CqlSession, DriverException}
 import org.apache.zeppelin.cassandra.TextBlockHierarchy._
 import org.apache.zeppelin.display.ui.OptionInput.ParamOption
 import org.apache.zeppelin.interpreter.InterpreterResult.Code
@@ -64,16 +64,15 @@ case class CassandraQueryOptions(consistency: Option[ConsistencyLevel],
 object InterpreterLogic {
   
   val CHOICES_SEPARATOR : String = """\|"""
-  val VARIABLE_PATTERN: Regex = """\{\{[^}]+\}\}""".r
-  val SIMPLE_VARIABLE_DEFINITION_PATTERN: Regex = """\{\{([^=]+)=([^=]+)\}\}""".r
-  val MULTIPLE_CHOICES_VARIABLE_DEFINITION_PATTERN: Regex = """\{\{([^=]+)=((?:[^=]+\|)+[^|]+)\}\}""".r
+  val VARIABLE_PATTERN: Regex = """\{\{[^}]+}}""".r
+  val SIMPLE_VARIABLE_DEFINITION_PATTERN: Regex = """\{\{([^=]+)=([^=]+)}}""".r
+  val MULTIPLE_CHOICES_VARIABLE_DEFINITION_PATTERN: Regex = """\{\{([^=]+)=((?:[^=]+\|)+[^|]+)}}""".r
 
   val STANDARD_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss"
   val ACCURATE_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
   // TODO(alex): add more time formatters, like, ISO...
   val STANDARD_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(STANDARD_DATE_FORMAT)
   val ACCURATE_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(ACCURATE_DATE_FORMAT)
-
 
   val preparedStatements : mutable.Map[String, PreparedStatement] = new ConcurrentHashMap[String,PreparedStatement]().asScala
 
@@ -91,9 +90,11 @@ object InterpreterLogic {
  *
  * @param session java driver session
  */
-class InterpreterLogic(val session: CqlSession)  {
+class InterpreterLogic(val session: CqlSession, val properties: Properties)  {
 
   val enhancedSession: EnhancedSession = new EnhancedSession(session)
+
+  val formatter: CqlFormatter = new CqlFormatter(properties)
 
   import InterpreterLogic._
 
@@ -103,13 +104,12 @@ class InterpreterLogic(val session: CqlSession)  {
     logger.info(s"Executing CQL statements : \n\n$stringStatements\n")
 
     try {
-      val protocolVersion = session.getContext.getProtocolVersion
-
-      val queries:List[AnyBlock] = parseInput(stringStatements)
+      val queries: List[AnyBlock] = parseInput(stringStatements)
 
       val queryOptions = extractQueryOptions(queries
         .filter(_.blockType == ParameterBlock)
         .map(_.get[QueryParameters]))
+      val executionFormatter = extractFormatter(context)
 
       logger.info(s"Current Cassandra query options = $queryOptions")
 
@@ -160,7 +160,7 @@ class InterpreterLogic(val session: CqlSession)  {
       if (results.nonEmpty) {
         results.last match {
           case(res: ResultSet, st: StatementT) =>
-            buildResponseMessage((res, st), protocolVersion)
+            buildResponseMessage((res, st), executionFormatter)
           case(output: String, _) => new InterpreterResult(Code.SUCCESS, output)
           case _ => throw new InterpreterException(s"Cannot parse result type : ${results.last}")
         }
@@ -187,7 +187,7 @@ class InterpreterLogic(val session: CqlSession)  {
   }
 
   def buildResponseMessage[StatementT <: Statement[StatementT]](lastResultSet: (ResultSet, StatementT),
-                                                                protocolVersion: ProtocolVersion): InterpreterResult = {
+                                                                fmt: CqlFormatter): InterpreterResult = {
     val output = new StringBuilder()
     val rows: collection.mutable.ArrayBuffer[Row] = ArrayBuffer()
 
@@ -216,8 +216,7 @@ class InterpreterLogic(val session: CqlSession)  {
               if (row.isNull(name)) {
                 null
               } else {
-                val value = row.getObject(name)
-                row.codecRegistry().codecFor(dataType, value).format(value)
+                fmt.getValueAsString(row, name, dataType)
               }
           }
           output.append(data.mkString("\t")).append("\n")
@@ -251,10 +250,45 @@ class InterpreterLogic(val session: CqlSession)  {
     }
   }
 
+  def extractFormatter(context: InterpreterContext): CqlFormatter = {
+    if (context == null) {
+      formatter
+    } else {
+      val props = context.getLocalProperties
+      logger.debug("Extracting query options from {}", props)
+      if (props == null || props.isEmpty) {
+        formatter
+      } else {
+        logger.debug("extracting properties into formatter. default: {}", formatter)
+        val locale = props.getOrDefault("locale", formatter.localeStr)
+        val timezone = props.getOrDefault("timezone", formatter.timeZoneId)
+        val outputFormat = props.getOrDefault("outputFormat", formatter.outputFormat)
+        val floatPrecision: Int = props.getOrDefault("floatPrecision",
+          formatter.floatPrecision.toString).toInt
+        val doublePrecision: Int = props.getOrDefault("doublePrecision",
+          formatter.doublePrecision.toString).toInt
+        val decimalPrecision: Int = props.getOrDefault("decimalPrecision",
+          formatter.decimalPrecision.toString).toInt
+        val timestampFormat = props.getOrDefault("timestampFormat", formatter.timestampFormat)
+        val timeFormat = props.getOrDefault("timeFormat", formatter.timeFormat)
+        val dateFormat = props.getOrDefault("dateFormat", formatter.dateFormat)
+
+        new CqlFormatter(
+          outputFormat = outputFormat,
+          floatPrecision = floatPrecision,
+          doublePrecision = doublePrecision,
+          decimalPrecision = decimalPrecision,
+          timestampFormat = timestampFormat,
+          timeFormat = timeFormat,
+          dateFormat = dateFormat,
+          timeZoneId = timezone,
+          localeStr = locale
+        )
+      }
+    }
+  }
+
   def extractQueryOptions(parameters: List[QueryParameters]): CassandraQueryOptions = {
-
-    logger.debug(s"Extracting query options from $parameters")
-
     val consistency: Option[ConsistencyLevel] = parameters
       .filter(_.paramType == ConsistencyParam)
       .map(_.getParam[Consistency])
@@ -295,12 +329,14 @@ class InterpreterLogic(val session: CqlSession)  {
     applyQueryOptions(options, statement)
   }
 
-  def generateBoundStatement(session: CqlSession, st: BoundStm, options: CassandraQueryOptions,context: InterpreterContext): BoundStatement = {
+  def generateBoundStatement(session: CqlSession, st: BoundStm, options: CassandraQueryOptions,
+                             context: InterpreterContext): BoundStatement = {
     logger.debug(s"Generating bound statement with name : '${st.name}' and bound values : ${st.values}")
     preparedStatements.get(st.name) match {
       case Some(ps) =>
         val boundValues = maybeExtractVariables(st.values, context)
-        createBoundStatement(session.getContext.getCodecRegistry, st.name, ps, boundValues)
+        val statement = createBoundStatement(session.getContext.getCodecRegistry, st.name, ps, boundValues)
+        applyQueryOptions(options, statement)
 
       case None =>
         throw new InterpreterException(s"The statement '${st.name}' can not be bound to values. " +
@@ -329,9 +365,9 @@ class InterpreterLogic(val session: CqlSession)  {
 
     def extractVariableAndDefaultValue(statement: String, exp: String): String = exp match {
       case MULTIPLE_CHOICES_VARIABLE_DEFINITION_PATTERN(variable, choices) =>
-        val escapedExp: String = exp.replaceAll( """\{""", """\\{""").replaceAll( """\}""", """\\}""").replaceAll("""\|""","""\\|""")
+        val escapedExp: String = exp.replaceAll( """\{""", """\\{""").replaceAll( """}""", """\\}""").replaceAll("""\|""","""\\|""")
         findInAngularRepository(variable) match {
-          case Some(value) => statement.replaceAll(escapedExp,value.toString)
+          case Some(value) => statement.replaceAll(escapedExp, value.toString)
           case None =>
             val listChoices:List[String] = choices.trim.split(CHOICES_SEPARATOR).toList
             val paramOptions = listChoices.map(choice => new ParamOption(choice, choice))
@@ -339,13 +375,13 @@ class InterpreterLogic(val session: CqlSession)  {
             statement.replaceAll(escapedExp,selected.toString)
         }
 
-      case SIMPLE_VARIABLE_DEFINITION_PATTERN(variable,defaultVal) =>
-        val escapedExp: String = exp.replaceAll( """\{""", """\\{""").replaceAll( """\}""", """\\}""")
+      case SIMPLE_VARIABLE_DEFINITION_PATTERN(variable, defaultVal) =>
+        val escapedExp: String = exp.replaceAll( """\{""", """\\{""").replaceAll( """}""", """\\}""")
         findInAngularRepository(variable) match {
           case Some(value) => statement.replaceAll(escapedExp,value.toString)
           case None =>
-            val value = context.getGui.input(variable,defaultVal)
-            statement.replaceAll(escapedExp,value.toString)
+            val value = context.getGui.input(variable, defaultVal)
+            statement.replaceAll(escapedExp, value.toString)
         }
 
       case _ =>
@@ -421,7 +457,6 @@ class InterpreterLogic(val session: CqlSession)  {
       case _ => throw new InterpreterException(s"Cannot parse date '$dateString'. " +
         s"Accepted formats : $STANDARD_DATE_FORMAT OR $ACCURATE_DATE_FORMAT");
     }
-    // TODO(alex): check about timezone...
     LocalDateTime.parse(dateString, formatter).toInstant(ZoneOffset.UTC)
   }
 

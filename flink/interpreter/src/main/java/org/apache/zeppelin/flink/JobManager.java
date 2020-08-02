@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class JobManager {
@@ -42,18 +43,21 @@ public class JobManager {
   private ConcurrentHashMap<JobID, FlinkJobProgressPoller> jobProgressPollerMap =
           new ConcurrentHashMap<>();
   private FlinkZeppelinContext z;
-  private String flinkWebUI;
+  private String flinkWebUrl;
+  private String replacedFlinkWebUrl;
 
   public JobManager(FlinkZeppelinContext z,
-                    String flinkWebUI) {
+                    String flinkWebUrl,
+                    String replacedFlinkWebUrl) {
     this.z = z;
-    this.flinkWebUI = flinkWebUI;
+    this.flinkWebUrl = flinkWebUrl;
+    this.replacedFlinkWebUrl = replacedFlinkWebUrl;
   }
 
   public void addJob(InterpreterContext context, JobClient jobClient) {
     String paragraphId = context.getParagraphId();
     JobClient previousJobClient = this.jobs.put(paragraphId, jobClient);
-    FlinkJobProgressPoller thread = new FlinkJobProgressPoller(flinkWebUI, jobClient.getJobID(), context);
+    FlinkJobProgressPoller thread = new FlinkJobProgressPoller(flinkWebUrl, jobClient.getJobID(), context);
     thread.setName("JobProgressPoller-Thread-" + paragraphId);
     thread.start();
     this.jobProgressPollerMap.put(jobClient.getJobID(), thread);
@@ -80,7 +84,12 @@ public class JobManager {
   public void sendFlinkJobUrl(InterpreterContext context) {
     JobClient jobClient = jobs.get(context.getParagraphId());
     if (jobClient != null) {
-      String jobUrl = flinkWebUI + "#/job/" + jobClient.getJobID();
+      String jobUrl = null;
+      if (replacedFlinkWebUrl != null) {
+        jobUrl = replacedFlinkWebUrl + "#/job/" + jobClient.getJobID();
+      } else {
+        jobUrl = flinkWebUrl + "#/job/" + jobClient.getJobID();
+      }
       Map<String, String> infos = new HashMap<>();
       infos.put("jobUrl", jobUrl);
       infos.put("label", "FLINK JOB");
@@ -110,7 +119,7 @@ public class JobManager {
   }
 
   public void cancelJob(InterpreterContext context) throws InterpreterException {
-    LOGGER.info("Canceling job associated of paragraph: "+ context.getParagraphId());
+    LOGGER.info("Canceling job associated of paragraph: {}", context.getParagraphId());
     JobClient jobClient = this.jobs.get(context.getParagraphId());
     if (jobClient == null) {
       LOGGER.warn("Unable to remove Job from paragraph {} as no job associated to this paragraph",
@@ -118,6 +127,7 @@ public class JobManager {
       return;
     }
 
+    boolean cancelled = false;
     try {
       String savepointDir = context.getLocalProperties().get("savepointDir");
       if (StringUtils.isBlank(savepointDir)) {
@@ -131,18 +141,23 @@ public class JobManager {
         LOGGER.info("Job {} of paragraph {} is stopped with save point path: {}",
                 jobClient.getJobID(), context.getParagraphId(), savePointPath);
       }
+      cancelled = true;
     } catch (Exception e) {
       String errorMessage = String.format("Fail to cancel job %s that is associated " +
               "with paragraph %s", jobClient.getJobID(), context.getParagraphId());
       LOGGER.warn(errorMessage, e);
       throw new InterpreterException(errorMessage, e);
     } finally {
-      FlinkJobProgressPoller jobProgressPoller = jobProgressPollerMap.remove(jobClient.getJobID());
-      if (jobProgressPoller != null) {
-        jobProgressPoller.cancel();
-        jobProgressPoller.interrupt();
+      if (cancelled) {
+        LOGGER.info("Cancelling is successful, remove the associated FlinkJobProgressPoller of paragraph: "
+                + context.getParagraphId());
+        FlinkJobProgressPoller jobProgressPoller = jobProgressPollerMap.remove(jobClient.getJobID());
+        if (jobProgressPoller != null) {
+          jobProgressPoller.cancel();
+          jobProgressPoller.interrupt();
+        }
+        this.jobs.remove(context.getParagraphId());
       }
-      this.jobs.remove(context.getParagraphId());
     }
   }
 
@@ -154,7 +169,7 @@ public class JobManager {
 
   class FlinkJobProgressPoller extends Thread {
 
-    private String flinkWebUI;
+    private String flinkWebUrl;
     private JobID jobId;
     private InterpreterContext context;
     private boolean isStreamingInsertInto;
@@ -162,8 +177,8 @@ public class JobManager {
     private AtomicBoolean running = new AtomicBoolean(true);
     private boolean isFirstPoll = true;
 
-    FlinkJobProgressPoller(String flinkWebUI, JobID jobId, InterpreterContext context) {
-      this.flinkWebUI = flinkWebUI;
+    FlinkJobProgressPoller(String flinkWebUrl, JobID jobId, InterpreterContext context) {
+      this.flinkWebUrl = flinkWebUrl;
       this.jobId = jobId;
       this.context = context;
       this.isStreamingInsertInto = context.getLocalProperties().containsKey("flink.streaming.insert_into");
@@ -172,9 +187,13 @@ public class JobManager {
     @Override
     public void run() {
       while (!Thread.currentThread().isInterrupted() && running.get()) {
+
         JsonNode rootNode = null;
         try {
-          rootNode = Unirest.get(flinkWebUI + "/jobs/" + jobId.toString())
+          synchronized (running) {
+            running.wait(1000);
+          }
+          rootNode = Unirest.get(flinkWebUrl + "/jobs/" + jobId.toString())
                   .asJson().getBody();
           JSONArray vertices = rootNode.getObject().getJSONArray("vertices");
           int totalTasks = 0;
@@ -194,13 +213,12 @@ public class JobManager {
           if (jobState.equalsIgnoreCase("finished")) {
             break;
           }
-          synchronized (running) {
-            running.wait(1000);
-          }
+          long duration = rootNode.getObject().getLong("duration") / 1000;
+
           if (isStreamingInsertInto) {
             if (isFirstPoll) {
               StringBuilder builder = new StringBuilder("%angular ");
-              builder.append("<h1>Duration: {{duration}} seconds");
+              builder.append("<h1>Duration: {{duration}} </h1>");
               builder.append("\n%text ");
               context.out.clear(false);
               context.out.write(builder.toString());
@@ -208,7 +226,7 @@ public class JobManager {
               isFirstPoll = false;
             }
             context.getAngularObjectRegistry().add("duration",
-                    rootNode.getObject().getLong("duration") / 1000,
+                    toRichTimeDuration(duration),
                     context.getNoteId(),
                     context.getParagraphId());
           }
@@ -218,15 +236,45 @@ public class JobManager {
       }
     }
 
-      public void cancel () {
-        this.running.set(false);
-        synchronized (running) {
-          running.notify();
-        }
-      }
-
-      public int getProgress () {
-        return progress;
+    public void cancel() {
+      this.running.set(false);
+      synchronized (running) {
+        running.notify();
       }
     }
+
+    public int getProgress() {
+      return progress;
+    }
   }
+
+  /**
+   * Convert duration in seconds to rich time duration format. e.g. 2 days 3 hours 4 minutes 5 seconds
+   *
+   * @param duration in second
+   * @return
+   */
+  static String toRichTimeDuration(long duration) {
+    long days = TimeUnit.SECONDS.toDays(duration);
+    duration -= TimeUnit.DAYS.toSeconds(days);
+    long hours = TimeUnit.SECONDS.toHours(duration);
+    duration -= TimeUnit.HOURS.toSeconds(hours);
+    long minutes = TimeUnit.SECONDS.toMinutes(duration);
+    duration -= TimeUnit.MINUTES.toSeconds(minutes);
+    long seconds = TimeUnit.SECONDS.toSeconds(duration);
+
+    StringBuilder builder = new StringBuilder();
+    if (days != 0) {
+      builder.append(days + " days ");
+    }
+    if (days != 0 || hours != 0) {
+      builder.append(hours + " hours ");
+    }
+    if (days != 0 || hours != 0 || minutes != 0) {
+      builder.append(minutes + " minutes ");
+    }
+    builder.append(seconds + " seconds");
+    return builder.toString();
+  }
+
+}

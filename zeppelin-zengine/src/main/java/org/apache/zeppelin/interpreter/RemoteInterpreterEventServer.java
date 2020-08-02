@@ -44,6 +44,8 @@ import org.apache.zeppelin.interpreter.thrift.RemoteInterpreterResultMessage;
 import org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService;
 import org.apache.zeppelin.interpreter.thrift.RunParagraphsEvent;
 import org.apache.zeppelin.interpreter.thrift.ServiceException;
+import org.apache.zeppelin.interpreter.thrift.WebUrlInfo;
+import org.apache.zeppelin.notebook.Note;
 import org.apache.zeppelin.resource.RemoteResource;
 import org.apache.zeppelin.resource.Resource;
 import org.apache.zeppelin.resource.ResourceId;
@@ -172,6 +174,17 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
   }
 
   @Override
+  public void sendWebUrl(WebUrlInfo weburlInfo) throws TException {
+    InterpreterGroup interpreterGroup =
+            interpreterSettingManager.getInterpreterGroupById(weburlInfo.getInterpreterGroupId());
+    if (interpreterGroup == null) {
+      LOGGER.warn("No such interpreterGroup: " + weburlInfo.getInterpreterGroupId());
+      return;
+    }
+    interpreterGroup.setWebUrl(weburlInfo.getWeburl());
+  }
+
+  @Override
   public void appendOutput(OutputAppendEvent event) throws TException {
     if (event.getAppId() == null) {
       runner.appendBuffer(
@@ -252,6 +265,14 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
     }
     interpreterGroup.getAngularObjectRegistry().add(angularObject.getName(),
         angularObject.get(), angularObject.getNoteId(), angularObject.getParagraphId());
+    if (angularObject.getNoteId() != null) {
+      try {
+        Note note = interpreterSettingManager.getNotebook().getNote(angularObject.getNoteId());
+        note.addOrUpdateAngularObject(intpGroupId, angularObject);
+      } catch (IOException e) {
+        LOGGER.warn("Fail to get note: " + angularObject.getNoteId(), e);
+      }
+    }
   }
 
   @Override
@@ -271,6 +292,15 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
     } else {
       localAngularObject.set(angularObject.get());
     }
+
+    if (angularObject.getNoteId() != null) {
+      try {
+        Note note = interpreterSettingManager.getNotebook().getNote(angularObject.getNoteId());
+        note.addOrUpdateAngularObject(intpGroupId, angularObject);
+      } catch (IOException e) {
+        LOGGER.warn("Fail to get note: " + angularObject.getNoteId(), e);
+      }
+    }
   }
 
   @Override
@@ -284,6 +314,15 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
       throw new TException("Invalid InterpreterGroupId: " + intpGroupId);
     }
     interpreterGroup.getAngularObjectRegistry().remove(name, noteId, paragraphId);
+
+    if (noteId != null) {
+      try {
+        Note note = interpreterSettingManager.getNotebook().getNote(noteId);
+        note.deleteAngularObject(intpGroupId, noteId, paragraphId, name);
+      } catch (IOException e) {
+        LOGGER.warn("Fail to get note: " + noteId, e);
+      }
+    }
   }
 
   @Override

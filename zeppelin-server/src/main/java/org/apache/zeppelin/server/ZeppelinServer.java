@@ -35,7 +35,6 @@ import javax.servlet.DispatcherType;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.directory.api.util.Strings;
 import org.apache.shiro.web.env.EnvironmentLoaderListener;
 import org.apache.shiro.web.servlet.ShiroFilter;
 import org.apache.zeppelin.cluster.ClusterManagerServer;
@@ -265,6 +264,13 @@ public class ZeppelinServer extends ResourceConfig {
 
     Runtime.getRuntime().addShutdownHook(shutdown(conf));
 
+    // Try to get Notebook from ServiceLocator, because Notebook instantiation is lazy, it is
+    // created when user open zeppelin in browser if we don't get it explicitly here.
+    // Lazy loading will cause paragraph recovery and cron job initialization is delayed.
+    Notebook notebook = sharedServiceLocator.getService(Notebook.class);
+    // Try to recover here, don't do it in constructor of Notebook, because it would cause deadlock.
+    notebook.recoveryIfNecessary();
+
     // when zeppelin is started inside of ide (especially for eclipse)
     // for graceful shutdown, input any key in console window
     if (System.getenv("ZEPPELIN_IDENT_STRING") == null) {
@@ -350,14 +356,14 @@ public class ZeppelinServer extends ResourceConfig {
 
   private static void runNoteOnStart(ZeppelinConfiguration conf) throws IOException, InterruptedException {
     String noteIdToRun = conf.getNotebookRunId();
-    if (!Strings.isEmpty(noteIdToRun)) {
+    if (!StringUtils.isEmpty(noteIdToRun)) {
       LOG.info("Running note {} on start", noteIdToRun);
       NotebookService notebookService = (NotebookService) ServiceLocatorUtilities.getService(
               sharedServiceLocator, NotebookService.class.getName());
 
       ServiceContext serviceContext;
       String base64EncodedJsonSerializedServiceContext = conf.getNotebookRunServiceContext();
-      if (Strings.isEmpty(base64EncodedJsonSerializedServiceContext)) {
+      if (StringUtils.isEmpty(base64EncodedJsonSerializedServiceContext)) {
         LOG.info("No service context provided. use ANONYMOUS");
         serviceContext = new ServiceContext(AuthenticationInfo.ANONYMOUS, new HashSet<String>() {});
       } else {

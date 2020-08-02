@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -15,11 +16,9 @@
 # limitations under the License.
 #
 
-log4j.rootLogger = INFO, stdout
+# Install instruction from here https://cran.r-project.org/bin/linux/ubuntu/README.html
 
-log4j.appender.stdout = org.apache.log4j.ConsoleAppender
-log4j.appender.stdout.layout = org.apache.log4j.PatternLayout
-log4j.appender.stdout.layout.ConversionPattern=%5p [%d] ({%t} %F[%M]:%L) - %m%n
-
-log4j.additivity.org.apache.zeppelin.interpreter = false
-log4j.logger.org.apache.zeppelin.interpreter = DEBUG, stdout
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+echo "deb https://cloud.r-project.org/bin/linux/ubuntu xenial-cran35/" | sudo tee -a /etc/apt/sources.list
+sudo apt-get update
+sudo apt-get install -y r-base

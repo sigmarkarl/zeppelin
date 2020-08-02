@@ -77,6 +77,8 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
 
   protected val interpreterOutput: InterpreterOutputStream
 
+  protected val sparkMaster: String = conf.get(SparkStringConstants.MASTER_PROP_NAME,
+    SparkStringConstants.DEFAULT_MASTER_VALUE)
 
   protected def open(): Unit = {
     /* Required for scoped mode.
@@ -186,7 +188,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
 
   protected def close(): Unit = {
     // delete stagingDir for yarn mode
-    if (conf.get("spark.master").startsWith("yarn")) {
+    if (sparkMaster.startsWith("yarn")) {
       val hadoopConf = new YarnConfiguration()
       val appStagingBaseDir = if (conf.contains("spark.yarn.stagingDir")) {
         new Path(conf.get("spark.yarn.stagingDir"))
@@ -242,7 +244,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
       case None =>
     }
 
-    initSparkWebUrl()
+    initAndSendSparkWebUrl()
 
     val hiveSiteExisted: Boolean =
       Thread.currentThread().getContextClassLoader.getResource("hive-site.xml") != null
@@ -314,7 +316,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
       case None =>
     }
 
-    initSparkWebUrl()
+    initAndSendSparkWebUrl()
 
     bind("spark", sparkSession.getClass.getCanonicalName, sparkSession, List("""@transient"""))
     bind("sc", "org.apache.spark.SparkContext", sc, List("""@transient"""))
@@ -329,13 +331,14 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
     scalaInterpret("print(\"\")")
   }
 
-  private def initSparkWebUrl(): Unit = {
+  private def initAndSendSparkWebUrl(): Unit = {
     val webUiUrl = properties.getProperty("zeppelin.spark.uiWebUrl");
     if (!StringUtils.isBlank(webUiUrl)) {
       this.sparkUrl = webUiUrl.replace("{{applicationId}}", sc.applicationId);
     } else {
       useYarnProxyURLIfNeeded()
     }
+    InterpreterContext.get.getIntpEventClient.sendWebUrlInfo(this.sparkUrl)
   }
 
   protected def createZeppelinContext(): Unit = {
@@ -357,7 +360,7 @@ abstract class BaseSparkScalaInterpreter(val conf: SparkConf,
 
   private def useYarnProxyURLIfNeeded() {
     if (properties.getProperty("spark.webui.yarn.useProxy", "false").toBoolean) {
-      if (sc.getConf.get("spark.master").startsWith("yarn")) {
+      if (sparkMaster.startsWith("yarn")) {
         val appId = sc.applicationId
         val yarnClient = YarnClient.createYarnClient
         val yarnConf = new YarnConfiguration()

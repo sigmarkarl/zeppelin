@@ -37,8 +37,7 @@
   <properties>
     <!--library versions-->
     <interpreter.name>flink</interpreter.name>
-<!--    <flink.version>1.11-SNAPSHOT</flink.version>-->
-    <flink.version>1.10.0</flink.version>
+    <flink.version>${flink1.10.version}</flink.version>
     <flink.hadoop.version>2.6.5</flink.hadoop.version>
     <hive.version>2.3.4</hive.version>
     <hiverunner.version>4.0.0</hiverunner.version>
@@ -143,18 +142,6 @@
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.jline</groupId>
-      <artifactId>jline-terminal</artifactId>
-      <version>3.9.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.jline</groupId>
-      <artifactId>jline-reader</artifactId>
-      <version>3.9.0</version>
     </dependency>
 
     <dependency>
@@ -620,9 +607,9 @@
     </dependency>
 
     <dependency>
-      <groupId>net.jodah</groupId>
-      <artifactId>concurrentunit</artifactId>
-      <version>0.4.4</version>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_2.11</artifactId>
+      <version>3.0.8</version>
       <scope>test</scope>
     </dependency>
 
@@ -724,6 +711,12 @@
         </configuration>
       </plugin>
 
+      <!-- Scalatest runs all Scala tests -->
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+      </plugin>
+
       <!-- Eclipse Integration -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -787,9 +780,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -876,14 +866,14 @@
     <profile>
       <id>flink-1.10</id>
       <properties>
-        <flink.version>1.10.0</flink.version>
+        <flink.version>${flink1.10.version}</flink.version>
       </properties>
     </profile>
 
     <profile>
       <id>flink-1.11</id>
       <properties>
-        <flink.version>1.11-SNAPSHOT</flink.version>
+        <flink.version>${flink1.11.version}</flink.version>
       </properties>
     </profile>
 
