@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:19.04
+FROM ubuntu:20.04
 MAINTAINER Apache Software Foundation <dev@zeppelin.apache.org>
 
 ARG ZEPPELIN_USER_ID=3000
@@ -37,7 +37,7 @@ RUN echo "$LOG_TAG update and install basic packages" && \
     apt -y update && \
     apt install -y locales && \
     locale-gen $LANG && \
-    apt install -y software-properties-common openjdk-13-jdk && \
+    apt install -y software-properties-common openjdk-14-jdk && \
     apt -y autoclean && \
     apt -y dist-upgrade && \
     apt-get install -y build-essential
@@ -65,7 +65,7 @@ ENV PATH /opt/conda/bin:$PATH
 
 RUN echo "$LOG_TAG Install python related packages" && \
     apt-get -y update && \
-    apt-get install -y python-dev python-pip && \
+    apt-get install -y python-dev python3-pip && \
     apt-get install -y gfortran && \
     # numerical/algebra packages
     apt-get install -y libblas-dev libatlas-base-dev liblapack-dev && \
@@ -87,7 +87,7 @@ RUN echo "$LOG_TAG Install R related packages" && \
     ls /opt/conda/bin && \
     #echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" | tee -a /etc/apt/sources.list && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
-    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu disco-cran35/' && \
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/' && \
     #gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 && \
     #gpg -a --export E084DAB9 | apt-key add - && \
     apt-get -y update && \
@@ -120,10 +120,14 @@ RUN R -e "if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages
    R -e "install.packages('ggfortify', repos='http://cran.us.r-project.org')" && \
    R -e "install.packages('CMplot', repos='http://cran.us.r-project.org')"
 
-COPY gorr /gorr
-RUN R -e "install.packages('/gorr', repos=NULL, type='source')"
+#COPY gorr /gorr
+#RUN R -e "install.packages('/gorr', repos=NULL, type='source')"
+
 RUN rm /usr/bin/python && rm /usr/bin/python3 && ln -s /opt/conda/bin/python3 /usr/bin/python && ln -s /opt/conda/bin/python3 /usr/bin/python3
-COPY zeppelin-${Z_VERSION} /zeppelin
+
+#COPY zeppelin-${Z_VERSION} /zeppelin
+COPY zeppelin-0.9.0-SNAPSHOT /zeppelin
+
 #COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.7.jar
 #COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.8.1.jar
 #COPY commons-lang3-3.9.jar /zeppelin-${Z_VERSION}/interpreter/spark/commons-lang3-3.9.jar
@@ -144,7 +148,7 @@ RUN rm -rf zeppelin/interpreter/spark/log4j-over-slf4j-1.7.30.jar
 RUN rm -rf zeppelin/interpreter/spark/logback-classic-1.2.3.jar
 RUN rm -rf zeppelin/interpreter/spark/logback-core-1.2.3.jar
 #RUN ln -s /zeppelin-${Z_VERSION} /zeppelin
-#COPY gor-scripts/lib ${Z_HOME}/interpreter/spark
+COPY gorservices-zeppelin-10.7-SNAPSHOT.jar ${Z_HOME}/interpreter/spark
 
 #RUN echo "$LOG_TAG Download Zeppelin binary" && \
 #    wget -O /tmp/zeppelin-${Z_VERSION}-bin-all.tgz http://archive.apache.org/dist/zeppelin/zeppelin-${Z_VERSION}/zeppelin-${Z_VERSION}-bin-all.tgz && \
@@ -160,11 +164,11 @@ RUN rm -rf zeppelin/interpreter/spark/logback-core-1.2.3.jar
     # Allow process to create new folders (e.g. webapps)
 #    chmod 775 ${Z_HOME}
 
-COPY log4j.properties ${Z_HOME}/conf/
-COPY 100-interpreter-spec.yaml /zeppelin/k8s/interpreter/
-COPY sm-zeppelin-10.0.0.jar /zeppelin/interpreter/spark/
-COPY shiro.ini /zeppelin/conf/
-COPY zeppelin-site.xml /zeppelin/conf/
+#COPY 100-interpreter-spec.yaml /zeppelin/k8s/interpreter/
+#COPY sm-zeppelin-10.0.0.jar /zeppelin/interpreter/spark/
+#COPY shiro.ini /zeppelin/conf/
+#COPY zeppelin-site.xml /zeppelin/conf/
+
 #COPY gorservices-spark-9.6-SNAPSHOT.jar /zeppelin/interpreter/spark/
 #COPY spark-repl_2.12-3.0.0-preview2.jar /zeppelin/interpreter/spark/
 
@@ -185,10 +189,19 @@ COPY zeppelin-site.xml /zeppelin/conf/
 # RUN update-alternatives --set java /usr/lib/jvm/java-13-openjdk-amd64/bin/java
 
 
+RUN mkdir -p ${Z_HOME}/logs ${Z_HOME}/run ${Z_HOME}/webapps && \
+    # Allow process to edit /etc/passwd, to create a user entry for zeppelin
+    chgrp root /etc/passwd && chmod a+rw /etc/passwd && \
+    # Give access to some specific folders
+    chmod -R 777 "${Z_HOME}/logs" "${Z_HOME}/run" "${Z_HOME}/notebook" "${Z_HOME}/conf" && \
+    # Allow process to create new folders (e.g. webapps)
+    chmod 777 ${Z_HOME}
 
 RUN chown -R zeppelin:zeppelin ${Z_HOME}/
 
-USER 1000
+COPY log4j.properties ${Z_HOME}/conf/
+
+USER 3000
 
 EXPOSE 8080
 

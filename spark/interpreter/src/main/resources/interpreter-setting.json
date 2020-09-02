@@ -148,12 +148,6 @@
         "defaultValue": "org.apache.spark.serializer.KryoSerializer",
         "type": "string"
       },
-      "spark.kryo.registrator": {
-        "envName": null,
-        "propertyName": "spark.kryo.registrator",
-        "defaultValue": "is.hail.kryo.HailKryoRegistrator",
-        "type": "string"
-      },
       "zeppelin.spark.enableSupportedVersionCheck": {
         "envName": null,
         "propertyName": "zeppelin.spark.enableSupportedVersionCheck",

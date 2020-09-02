@@ -47,8 +47,6 @@ function usage() {
     exit 0
 }
 
-echo "haha"
-
 POSITIONAL=()
 while [[ $# -gt 0 ]]
 do

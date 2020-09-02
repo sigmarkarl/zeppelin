@@ -29,7 +29,7 @@ data:
   # If you have your ingress controller configured to connect to `zeppelin-server` service and have a domain name for it (with wildcard subdomain point the same address), you can replace serviceDomain field with your own domain.
   SERVICE_DOMAIN: local.zeppelin-project.org:8080
   ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE: nextcode/spark:3.0.0
-  ZEPPELIN_K8S_CONTAINER_IMAGE: apache/zeppelin-interpreter:0.9.0-SNAPSHOT
+  ZEPPELIN_K8S_CONTAINER_IMAGE: nextcode/zeppelin:0.9.0
   ZEPPELIN_HOME: /opt/zeppelin
   ZEPPELIN_SERVER_RPC_PORTRANGE: 12320:12320
   # default value of 'master' property for spark interpreter.
@@ -114,13 +114,18 @@ spec:
           - key: nginx.conf
             path: nginx.conf
       - name: zeppelin-root
-        hostPath:
-          path: /Users/sigmar/zeppelin
-          type: Directory
+        persistentVolumeClaim:
+          claimName: pvc-gor-nfs-v2
+        #hostPath:
+        #  path: /Users/sigmar/zeppelin
+        #  type: Directory
+      imagePullSecrets:
+      - name: dockerhub-nextcode-download-credentials
       containers:
       - name: zeppelin-server
-        image: apache/zeppelin-server:0.9.0-SNAPSHOT
+        image: nextcode/zeppelin:0.9.0
         command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
+        imagePullPolicy: Always
         lifecycle:
           preStop:
             exec:
@@ -156,12 +161,12 @@ spec:
       #    mountPath: /zeppelin/k8s
         - name: zeppelin-root
           mountPath: /zeppelin/k8s
-          subPath: k8s
-        - name: zeppelin-root
-          mountPath: /zeppelin/bin
-          subPath: bin
+          subPath: zeppelin/k8s
         #- name: zeppelin-root
-        #  mountPath: /zeppelin/conf
+        #  mountPath: /zeppelin/notebook
+        #  subPath: zeppelin/notebook
+        - name: zeppelin-root
+          mountPath: /mnt/csa
         #  subPath: conf
       - name: zeppelin-server-gateway
         image: nginx:1.14.0

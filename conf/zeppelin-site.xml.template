@@ -731,12 +731,6 @@
 </property>
 
 <property>
-  <name>zeppelin.k8s.envs</name>
-  <value>SPARK_SUBMIT_OPTIONS="--conf spark.jars.ivy=/tmp"</value>
-  <description>bleh</description>
-</property>
-
-<property>
   <name>zeppelin.k8s.portforward</name>
   <value>false</value>
   <description>Port forward to interpreter rpc port. Set 'true' only on local development when zeppelin.k8s.mode 'on'</description>

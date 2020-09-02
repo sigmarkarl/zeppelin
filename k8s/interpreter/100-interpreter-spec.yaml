@@ -43,7 +43,7 @@ spec:
   containers:
   - name: {{zeppelin.k8s.interpreter.container.name}}
     image: {{zeppelin.k8s.interpreter.container.image}}
-    command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/interpreter.sh -d $(ZEPPELIN_HOME)/interpreter/{{zeppelin.k8s.interpreter.group.name}} -r {{zeppelin.k8s.interpreter.rpc.portRange}} -c {{zeppelin.k8s.server.rpc.host}} -p {{zeppelin.k8s.server.rpc.portRange}} -i {{zeppelin.k8s.interpreter.group.id}} -l {{zeppelin.k8s.interpreter.localRepo}} -g {{zeppelin.k8s.interpreter.setting.name}}"]
+    command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/interpreter.sh -d $(ZEPPELIN_HOME)/interpreter/{{zeppelin.k8s.interpreter.group.name}} -r {{zeppelin.k8s.interpreter.rpc.portRange}} -c {{zeppelin.k8s.server.rpc.service}} -p {{zeppelin.k8s.server.rpc.portRange}} -i {{zeppelin.k8s.interpreter.group.id}} -l {{zeppelin.k8s.interpreter.localRepo}} -g {{zeppelin.k8s.interpreter.setting.name}}"]
     lifecycle:
       preStop:
         exec:
@@ -54,8 +54,6 @@ spec:
     - name: {{key}}
       value: {{value}}
   {% endfor %}
-    - name: SPARK_SUBMIT_OPTIONS
-      value: --conf spark.jars.ivy=/tmp --conf spark.eventLog.enabled=false
   {% if zeppelin.k8s.interpreter.cores is defined and zeppelin.k8s.interpreter.memory is defined %}
     resources:
       requests:
@@ -70,6 +68,9 @@ spec:
     - name: spark-home
       mountPath: /spark
     - name: zeppelin-root
+      mountPath: /zeppelin/k8s
+      subPath: k8s
+    - name: zeppelin-root
       mountPath: /zeppelin/bin
       subPath: bin
   initContainers:
@@ -79,6 +80,12 @@ spec:
     volumeMounts:
     - name: spark-home
       mountPath: /spark
+    - name: zeppelin-root
+      mountPath: /zeppelin/k8s
+      subPath: k8s
+    - name: zeppelin-root
+      mountPath: /zeppelin/bin
+      subPath: bin
   volumes:
   - name: spark-home
     emptyDir: {}

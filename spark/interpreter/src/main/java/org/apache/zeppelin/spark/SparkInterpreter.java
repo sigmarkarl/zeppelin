@@ -140,6 +140,9 @@ public class SparkInterpreter extends AbstractInterpreter {
     ClassLoader scalaInterpreterClassLoader = Thread.currentThread().getContextClassLoader();
 
     String zeppelinHome = System.getenv("ZEPPELIN_HOME");
+    if(zeppelinHome == null) {
+      zeppelinHome = System.getProperty("zeppelin.home");
+    }
     if (zeppelinHome != null) {
       // ZEPPELIN_HOME is null in yarn-cluster mode, load it directly via current ClassLoader.
       // otherwise, load from the specific folder ZEPPELIN_HOME/interpreter/spark/scala-<version>
