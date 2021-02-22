@@ -625,8 +625,251 @@
       "jobName": "paragraph_1578905276271_782994324",
       "id": "paragraph_1578905276271_782994324",
       "dateCreated": "2020-01-13 16:47:56.271",
+<<<<<<< HEAD:notebook/Flink Tutorial/Exploratory Data Analytics_2EZ9G3JJU.zpln
+      "dateStarted": "2020-02-25 13:26:40.177",
+      "dateFinished": "2020-02-25 13:26:59.228",
+      "status": "FINISHED"
+    },
+    {
+      "title": "Show all hive tables",
+      "text": "%hive\n\nshow tables\n",
+      "user": "anonymous",
+      "dateUpdated": "2020-02-25 13:27:52.508",
+      "config": {
+        "colWidth": 6.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300.0,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {
+                    "columns": [
+                      {
+                        "name": "tab_name0",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {
+                          "priority": 0.0,
+                          "direction": "asc"
+                        },
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      }
+                    ],
+                    "scrollFocus": {},
+                    "selection": [],
+                    "grouping": {
+                      "grouping": [],
+                      "aggregations": [],
+                      "rowExpandedStates": {}
+                    },
+                    "treeView": {},
+                    "pagination": {
+                      "paginationCurrentPage": 1.0,
+                      "paginationPageSize": 250.0
+                    }
+                  },
+                  "tableColumnTypeState": {
+                    "names": {
+                      "tab_name": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "text",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/text",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "tab_name\nbank\nbank_raw\ndepartments\ndest_csv\ndest_orc\nemployee\nitems\nsink_kafka\nsource_csv\nsource_kafka\nweb_log_small\n"
+          }
+        ]
+      },
+      "apps": [],
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1580889919226_-1710921935",
+      "id": "paragraph_1580889919226_-1710921935",
+      "dateCreated": "2020-02-05 16:05:19.226",
+      "dateStarted": "2020-02-25 13:27:52.513",
+      "dateFinished": "2020-02-25 13:27:55.846",
+      "status": "FINISHED"
+    },
+    {
+      "title": "Describe Hive table via Flink Sql",
+      "text": "%flink.bsql\n\nshow tables",
+      "user": "anonymous",
+      "dateUpdated": "2020-02-25 13:28:14.314",
+      "config": {
+        "colWidth": 6.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300.0,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "table": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "table\nUnnamedTable$0\nbank\nbank_raw\ndepartments\ndest_csv\ndest_orc\nemployee\nitems\nsink_kafka\nsource_csv\nsource_kafka\nweb_log_small\n"
+          }
+        ]
+      },
+      "apps": [],
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1580890881367_1309558694",
+      "id": "paragraph_1580890881367_1309558694",
+      "dateCreated": "2020-02-05 16:21:21.368",
+      "dateStarted": "2020-02-25 13:28:13.536",
+      "dateFinished": "2020-02-25 13:28:13.686",
+      "status": "FINISHED"
+    },
+    {
+      "title": "Query Hive table via Flink Sql",
+      "text": "%flink.bsql\n\nselect * from employee\n",
+      "user": "anonymous",
+      "dateUpdated": "2020-02-25 13:36:20.020",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300.0,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "eid": "string",
+                      "name": "string",
+                      "salary": "string",
+                      "destination": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "eid\tname\tsalary\tdestination\n1201\tGopal\t45000\tTechnical manager\n1202\tManisha\t45000\tProof reader\n1203\tMasthanvali\t40000\tTechnical writer\n1204\tKiran\t40000\tHr Admin\n1205\tKranthi\t30000\tOp Admin\n"
+          }
+        ]
+      },
+      "apps": [],
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1578043607185_590649655",
+      "id": "paragraph_1578043607185_590649655",
+      "dateCreated": "2020-01-03 17:26:47.185",
+      "dateStarted": "2020-02-25 13:36:20.025",
+      "dateFinished": "2020-02-25 13:36:53.391",
+=======
       "dateStarted": "2020-04-27 11:41:44.034",
       "dateFinished": "2020-04-27 11:41:51.537",
+>>>>>>> 5528bcfb40edd808eb496cd17b2f466e6db4c077:notebook/Flink Tutorial/7. Batch Data Analytics_2EZ9G3JJU.zpln
       "status": "FINISHED"
     },
     {
@@ -652,11 +895,18 @@
   "id": "2EZ9G3JJU",
   "defaultInterpreterGroup": "flink",
   "version": "0.9.0-SNAPSHOT",
+  "permissions": {
+    "owners": [],
+    "runners": [],
+    "readers": [],
+    "writers": []
+  },
   "noteParams": {},
   "noteForms": {},
   "angularObjects": {},
   "config": {
     "isZeppelinNotebookCronEnable": false
   },
-  "info": {}
+  "info": {},
+  "path": "/Flink Tutorial/Exploratory Data Analytics"
 }

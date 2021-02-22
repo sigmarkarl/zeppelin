@@ -41,11 +41,11 @@
         <datanucleus.core.version>3.2.10</datanucleus.core.version>
 
         <!-- spark versions -->
-        <spark.version>2.4.5</spark.version>
+        <spark.version>3.0.1</spark.version>
         <protobuf.version>2.5.0</protobuf.version>
-        <py4j.version>0.10.7</py4j.version>
-        <spark.scala.version>2.11.12</spark.scala.version>
-        <spark.scala.binary.version>2.11</spark.scala.binary.version>
+        <py4j.version>0.10.9.1</py4j.version>
+        <spark.scala.version>2.12.13</spark.scala.version>
+        <spark.scala.binary.version>2.12</spark.scala.binary.version>
 
         <spark.archive>spark-${spark.version}</spark.archive>
         <spark.src.download.url>
@@ -54,17 +54,20 @@
         <spark.bin.download.url>
             https://archive.apache.org/dist/spark/${spark.archive}/${spark.archive}-bin-without-hadoop.tgz
         </spark.bin.download.url>
+
+        <maven.compiler.source>12</maven.compiler.source>
+        <maven.compiler.target>12</maven.compiler.target>
     </properties>
 
     <modules>
         <module>interpreter</module>
         <module>spark-scala-parent</module>
-        <module>scala-2.10</module>
-        <module>scala-2.11</module>
+        <!--module>scala-2.10</module>
+        <module>scala-2.11</module-->
         <module>scala-2.12</module>
         <module>spark-dependencies</module>
         <module>spark-shims</module>
-        <module>spark1-shims</module>
+        <!--module>spark1-shims</module-->
         <module>spark2-shims</module>
         <module>spark3-shims</module>
     </modules>
@@ -104,6 +107,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
+                <version>4.3.1</version>
                 <executions>
                     <execution>
                         <id>eclipse-add-source</id>
@@ -127,7 +131,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <scalaVersion>${scala.compile.version}</scalaVersion>
+                    <scalaVersion>2.12.11</scalaVersion>
+                    <source>13</source>
+                    <target>13</target>
                     <args>
                         <arg>-unchecked</arg>
                         <arg>-deprecation</arg>
@@ -140,9 +146,9 @@
                     </jvmArgs>
                     <javacArgs>
                         <javacArg>-source</javacArg>
-                        <javacArg>${java.version}</javacArg>
+                        <javacArg>1.8</javacArg>
                         <javacArg>-target</javacArg>
-                        <javacArg>${java.version}</javacArg>
+                        <javacArg>1.8</javacArg>
                         <javacArg>-Xlint:all,-serial,-path,-options</javacArg>
                     </javacArgs>
                 </configuration>
@@ -158,7 +164,7 @@
         <profile>
             <id>spark-scala-2.12</id>
             <properties>
-                <spark.scala.version>2.12.7</spark.scala.version>
+                <spark.scala.version>2.12.9</spark.scala.version>
                 <spark.scala.binary.version>2.12</spark.scala.binary.version>
             </properties>
         </profile>

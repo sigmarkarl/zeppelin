@@ -48,7 +48,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 @RunWith(Enclosed.class)
 public class SparkShimsTest {
 
-  @RunWith(Parameterized.class)
+  /*@RunWith(Parameterized.class)
   public static class ParamTests {
     @Parameters(name = "Hadoop {0} supports jobUrl: {1}")
     public static Collection<Object[]> data() {
@@ -106,7 +106,7 @@ public class SparkShimsTest {
           };
       assertEquals(expected, sparkShims.supportYarn6615(version));
     }
-  }
+  }*/
 
   @RunWith(PowerMockRunner.class)
   @PrepareForTest({ZeppelinContext.class, VersionInfo.class})

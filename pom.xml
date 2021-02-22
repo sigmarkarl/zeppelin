@@ -70,27 +70,27 @@
     <module>angular</module>
     <module>shell</module>
     <module>livy</module>
-    <module>hbase</module>
+    <!--module>hbase</module-->
     <module>pig</module>
-    <module>jdbc</module>
+    <!--module>jdbc</module-->
     <module>file</module>
-    <module>flink</module>
-    <module>flink-cmd</module>
+    <!--module>flink</module>
+    <module>flink-cmd</module-->
     <module>ignite</module>
-    <module>influxdb</module>
+    <!--module>influxdb</module-->
     <module>kylin</module>
     <module>python</module>
-    <module>lens</module>
-    <module>cassandra</module>
+    <!--module>lens</module-->
+    <!--module>cassandra</module-->
     <module>elasticsearch</module>
     <module>bigquery</module>
     <module>alluxio</module>
-    <module>scio</module>
+    <!--module>scio</module-->
     <module>neo4j</module>
-    <module>sap</module>
-    <module>scalding</module>
+    <!--module>sap</module-->
+    <!--module>scalding</module-->
     <module>java</module>
-    <module>beam</module>
+    <!--module>beam</module-->
     <module>hazelcastjet</module>
     <module>geode</module>
     <module>ksql</module>
@@ -107,13 +107,12 @@
 
   <properties>
     <!-- language versions -->
-    <java.version>1.8</java.version>
-    <scala.2.10.version>2.10.5</scala.2.10.version>
-    <scala.version>${scala.2.10.version}</scala.version>
-    <scala.binary.version>2.10</scala.binary.version>
-    <scala.2.11.version>2.11.8</scala.2.11.version>
-    <scalatest.version>3.0.7</scalatest.version>
-    <scalacheck.version>1.12.5</scalacheck.version>
+    <java.version>12</java.version>
+    <scala.version>2.12.10</scala.version>
+    <scala.binary.version>2.12</scala.binary.version>
+    <scala.2.11.version>2.11.12</scala.2.11.version>
+    <scalatest.version>3.2.0-SNAP10</scalatest.version>
+    <scalacheck.version>1.14.3</scalacheck.version>
 
     <!-- frontend maven plugin related versions-->
     <node.version>v12.3.1</node.version>
@@ -1256,7 +1255,7 @@
           <artifactId>scala-maven-plugin</artifactId>
           <version>${plugin.scala.alchim31.version}</version>
         </plugin>
-        
+
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -1392,7 +1391,7 @@
           <artifactId>maven-eclipse-plugin</artifactId>
           <version>${plugin.eclipse.version}</version>
         </plugin>
-        
+
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
@@ -1459,7 +1458,7 @@
         <artifactId>frontend-maven-plugin</artifactId>
         <version>${plugin.frontend.version}</version>
       </plugin>
-      
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
@@ -1531,28 +1530,17 @@
         <artifactId>apache-rat-plugin</artifactId>
         <version>${plugin.rat.version}</version>
       </plugin>
-      
+
       </plugins>
     </pluginManagement>
   </build>
 
   <profiles>
     <profile>
-      <id>scala-2.10</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
+      <id>scala-2.12</id>
       <properties>
-        <scala.version>${scala.2.10.version}</scala.version>
-        <scala.binary.version>2.10</scala.binary.version>
-      </properties>
-    </profile>
-
-    <profile>
-      <id>scala-2.11</id>
-      <properties>
-        <scala.version>${scala.2.11.version}</scala.version>
-        <scala.binary.version>2.11</scala.binary.version>
+        <scala.version>2.12.10</scala.version>
+        <scala.binary.version>2.12</scala.binary.version>
       </properties>
     </profile>
 

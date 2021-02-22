@@ -111,12 +111,48 @@
         "description": "Max number of Spark SQL result to display.",
         "type": "number"
       },
-
+      "master": {
+        "envName": "MASTER",
+        "propertyName": "spark.master",
+        "defaultValue": "k8s://https://kubernetes.default.svc",
+        "description": "Spark master uri. ex) spark://masterhost:7077",
+        "type": "string"
+      },
+      "spark.kubernetes.executor.volumes.hostPath.userhome.options.path": {
+        "envName": "GORPROJECT_PATH",
+        "propertyName": "spark.kubernetes.executor.volumes.hostPath.userhome.options.path",
+        "defaultValue": "/c/gorproject",
+        "type": "string"
+      },
+      "spark.kubernetes.executor.volumes.hostPath.userhome.mount.path": {
+        "envName": null,
+        "propertyName": "spark.kubernetes.executor.volumes.hostPath.userhome.mount.path",
+        "defaultValue": "/gorproject",
+        "type": "string"
+      },
+      "spark.kubernetes.driver.volumes.hostPath.userhome.options.path": {
+        "envName": "GORPROJECT_PATH",
+        "propertyName": "spark.kubernetes.driver.volumes.hostPath.userhome.options.path",
+        "defaultValue": "/c/gorproject",
+        "type": "string"
+      },
+      "spark.kubernetes.driver.volumes.hostPath.userhome.mount.path": {
+        "envName": null,
+        "propertyName": "spark.kubernetes.driver.volumes.hostPath.userhome.mount.path",
+        "defaultValue": "/gorproject",
+        "type": "string"
+      },
+      "spark.serializer": {
+        "envName": null,
+        "propertyName": "spark.serializer",
+        "defaultValue": "org.apache.spark.serializer.KryoSerializer",
+        "type": "string"
+      },
       "zeppelin.spark.enableSupportedVersionCheck": {
         "envName": null,
         "propertyName": "zeppelin.spark.enableSupportedVersionCheck",
-        "defaultValue": true,
-        "description": "Whether checking supported spark version. Developer only setting, not for production use",
+        "defaultValue": false,
+        "description": "Do not change - developer only setting, not for production use",
         "type": "checkbox"
       },
       "zeppelin.spark.uiWebUrl": {
@@ -288,6 +324,17 @@
       "editOnDblClick": false,
       "completionSupport": false,
       "completionKey": "TAB"
+    }
+  },
+  {
+    "group": "spark",
+    "name": "gor",
+    "className": "com.nextcode.zeppelin.SparkGORInterpreter",
+    "properties": {},
+    "editor": {
+      "language": "gor",
+      "editOnDblClick": false,
+      "completionSupport": false
     }
   },
   {

@@ -8,7 +8,7 @@
       "progress": 0,
       "config": {
         "runOnSelectionChange": true,
-        "title": true,
+        "title": false,
         "checkEmpty": true,
         "colWidth": 12.0,
         "fontSize": 9.0,
@@ -331,11 +331,18 @@
   "id": "2EYD56B9B",
   "defaultInterpreterGroup": "flink",
   "version": "0.9.0-SNAPSHOT",
+  "permissions": {
+    "owners": [],
+    "runners": [],
+    "readers": [],
+    "writers": []
+  },
   "noteParams": {},
   "noteForms": {},
   "angularObjects": {},
   "config": {
     "isZeppelinNotebookCronEnable": false
   },
-  "info": {}
+  "info": {},
+  "path": "/Flink Tutorial/Streaming ETL"
 }

@@ -1058,7 +1058,7 @@ public class InterpreterSetting {
               value.getClass());
         }
       }
-      return newProperties;
+      ret = newProperties;
     }
     throw new RuntimeException("Can not convert this type: " + (properties != null ? properties.getClass() : "null"));
   }

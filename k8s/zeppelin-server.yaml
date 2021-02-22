@@ -28,8 +28,8 @@ data:
   # Default value is 'local.zeppelin-project.org' while it points 127.0.0.1 and `kubectl port-forward zeppelin-server` will give localhost to connects.
   # If you have your ingress controller configured to connect to `zeppelin-server` service and have a domain name for it (with wildcard subdomain point the same address), you can replace serviceDomain field with your own domain.
   SERVICE_DOMAIN: local.zeppelin-project.org:8080
-  ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE: spark:2.4.5
-  ZEPPELIN_K8S_CONTAINER_IMAGE: apache/zeppelin-interpreter:0.9.0-SNAPSHOT
+  ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE: nextcode/spark:3.0.0
+  ZEPPELIN_K8S_CONTAINER_IMAGE: nextcode/zeppelin:0.9.0
   ZEPPELIN_HOME: /opt/zeppelin
   ZEPPELIN_SERVER_RPC_PORTRANGE: 12320:12320
   # default value of 'master' property for spark interpreter.
@@ -113,10 +113,19 @@ spec:
           items:
           - key: nginx.conf
             path: nginx.conf
+      - name: zeppelin-root
+        persistentVolumeClaim:
+          claimName: pvc-gor-nfs-v2
+        #hostPath:
+        #  path: /Users/sigmar/zeppelin
+        #  type: Directory
+      imagePullSecrets:
+      - name: dockerhub-nextcode-download-credentials
       containers:
       - name: zeppelin-server
-        image: apache/zeppelin-server:0.9.0-SNAPSHOT
+        image: nextcode/zeppelin:0.9.0
         command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
+        imagePullPolicy: Always
         lifecycle:
           preStop:
             exec:
@@ -143,13 +152,22 @@ spec:
         envFrom:
         - configMapRef:
             name: zeppelin-server-conf-map
-      # volumeMounts:
+        volumeMounts:
       #  - name: zeppelin-server-notebook-volume     # configure this to persist notebook
       #    mountPath: /zeppelin/notebook
       #  - name: zeppelin-server-conf                # configure this to persist Zeppelin configuration
       #    mountPath: /zeppelin/conf
       #  - name: zeppelin-server-custom-k8s          # configure this to mount customized Kubernetes spec for interpreter
       #    mountPath: /zeppelin/k8s
+        - name: zeppelin-root
+          mountPath: /zeppelin/k8s
+          subPath: zeppelin/k8s
+        #- name: zeppelin-root
+        #  mountPath: /zeppelin/notebook
+        #  subPath: zeppelin/notebook
+        - name: zeppelin-root
+          mountPath: /mnt/csa
+        #  subPath: conf
       - name: zeppelin-server-gateway
         image: nginx:1.14.0
         command: ["/bin/sh", "-c"]

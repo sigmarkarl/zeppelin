@@ -41,11 +41,13 @@ if [ -f /proc/self/cgroup ] && [ -n "$(command -v getent)" ]; then
             if [ -w /etc/passwd ] ; then
                 echo "zeppelin:x:$myuid:$mygid:anonymous uid:$Z_HOME:/bin/false" >> /etc/passwd
             else
-                echo "Container ENTRYPOINT failed to add passwd entry for anonymous UID"
+                echo "Container ENTRYPOINT2 failed to add passwd entry for anonymous UID"
             fi
         fi
     fi
 fi
+
+echo "$@"
 
 while getopts "hc:p:r:i:d:l:v:u:g:" o; do
     case ${o} in

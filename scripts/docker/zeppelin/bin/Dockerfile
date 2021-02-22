@@ -68,16 +68,51 @@ RUN echo "$LOG_TAG Download Zeppelin binary" && \
     chown -R root:root ${Z_HOME} && \
     mkdir -p ${Z_HOME}/logs ${Z_HOME}/run ${Z_HOME}/webapps && \
     # Allow process to edit /etc/passwd, to create a user entry for zeppelin
-    chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
+#    chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
     # Give access to some specific folders
-    chmod -R 775 "${Z_HOME}/logs" "${Z_HOME}/run" "${Z_HOME}/notebook" "${Z_HOME}/conf" && \
+#    chmod -R 775 "${Z_HOME}/logs" "${Z_HOME}/run" "${Z_HOME}/notebook" "${Z_HOME}/conf" && \
     # Allow process to create new folders (e.g. webapps)
-    chmod 775 ${Z_HOME}
+#    chmod 775 ${Z_HOME}
+
+#COPY 100-interpreter-spec.yaml /zeppelin/k8s/interpreter/
+#COPY sm-zeppelin-10.0.0.jar /zeppelin/interpreter/spark/
+#COPY shiro.ini /zeppelin/conf/
+#COPY zeppelin-site.xml /zeppelin/conf/
+
+#COPY gorservices-spark-9.6-SNAPSHOT.jar /zeppelin/interpreter/spark/
+#COPY spark-repl_2.12-3.0.0-preview2.jar /zeppelin/interpreter/spark/
+
+
+
+# RUN apt install -y rsync liblz4-dev openjdk-12-jdk-headless && \
+#     update-alternatives --set java /usr/lib/jvm/java-12-openjdk-amd64/bin/java
+
+# RUN ln -s /usr/lib/jvm/java-12-openjdk-amd64/include /usr/lib/jvm/include && \
+#     ln -s /usr/lib/jvm/java-12-openjdk-amd64/lib /usr/lib/jvm/lib
+
+# RUN git clone https://github.com/sigmarkarl/hail.git
+
+# RUN cd hail/hail && \
+#     make install-on-cluster HAIL_COMPILE_NATIVES=1 SPARK_VERSION=2.4.4
+
+# RUN cp /usr/local/lib/python3.7/dist-packages/hail/hail-all-spark.jar /zeppelin/interpreter/spark/
+# RUN update-alternatives --set java /usr/lib/jvm/java-13-openjdk-amd64/bin/java
+
+
+RUN mkdir -p ${Z_HOME}/logs ${Z_HOME}/run ${Z_HOME}/webapps && \
+    # Allow process to edit /etc/passwd, to create a user entry for zeppelin
+    chgrp root /etc/passwd && chmod a+rw /etc/passwd && \
+    # Give access to some specific folders
+    chmod -R 777 "${Z_HOME}/logs" "${Z_HOME}/run" "${Z_HOME}/notebook" "${Z_HOME}/conf" && \
+    # Allow process to create new folders (e.g. webapps)
+    chmod 777 ${Z_HOME}
+
+RUN chown -R zeppelin:zeppelin ${Z_HOME}/
 
 COPY log4j.properties ${Z_HOME}/conf/
 COPY log4j_docker.properties ${Z_HOME}/conf/
 
-USER 1000
+USER 3000
 
 EXPOSE 8080
 

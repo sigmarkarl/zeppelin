@@ -36,8 +36,8 @@
   <properties>
     <!--plugin versions -->
     <plugin.failsafe.version>2.16</plugin.failsafe.version>
-    <plugin.scala.version>2.15.2</plugin.scala.version>
-    <plugin.scalatest.version>1.0</plugin.scalatest.version>
+    <plugin.scala.version>4.0.1</plugin.scala.version>
+    <plugin.scalatest.version>2.0.0</plugin.scalatest.version>
   </properties>
 
   <dependencyManagement>
@@ -89,17 +89,23 @@
       <artifactId>scalatest_${scala.binary.version}</artifactId>
       <version>${scalatest.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.scala-lang.modules</groupId>
+          <artifactId>scala-xml_2.12</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
   <profiles>
     <profile>
-      <id>scala-2.11</id>
+      <id>scala-2.12</id>
       <dependencies>
         <dependency>
           <groupId>org.scala-lang.modules</groupId>
           <artifactId>scala-xml_${scala.binary.version}</artifactId>
-          <version>1.1.0</version>
+          <version>1.2.0</version>
           <scope>provided</scope>
         </dependency>
       </dependencies>

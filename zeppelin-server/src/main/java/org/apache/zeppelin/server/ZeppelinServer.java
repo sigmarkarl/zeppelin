@@ -136,7 +136,7 @@ public class ZeppelinServer extends ResourceConfig {
   public static Server jettyWebServer;
   public static ServiceLocator sharedServiceLocator;
 
-  private static ZeppelinConfiguration conf;
+  public static ZeppelinConfiguration conf;
   private static PrometheusMeterRegistry promMetricRegistry;
 
   public static void reset() {
@@ -433,7 +433,7 @@ public class ZeppelinServer extends ResourceConfig {
     webapp.addServlet(servletHolder, "/ws/*");
   }
 
-  private static void setupClusterManagerServer(ServiceLocator serviceLocator) {
+  public static void setupClusterManagerServer(ServiceLocator serviceLocator) {
     if (conf.isClusterMode()) {
       LOG.info("Cluster mode is enabled, starting ClusterManagerServer");
       ClusterManagerServer clusterManagerServer = ClusterManagerServer.getInstance(conf);

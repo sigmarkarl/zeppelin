@@ -68,7 +68,7 @@ public class SparkInterpreter extends AbstractInterpreter {
       System.setProperty("scala.color", "true");
     }
     this.enableSupportedVersionCheck = java.lang.Boolean.parseBoolean(
-        properties.getProperty("zeppelin.spark.enableSupportedVersionCheck", "true"));
+        properties.getProperty("zeppelin.spark.enableSupportedVersionCheck", "false"));
     innerInterpreterClassMap.put("2.10", "org.apache.zeppelin.spark.SparkScala210Interpreter");
     innerInterpreterClassMap.put("2.11", "org.apache.zeppelin.spark.SparkScala211Interpreter");
     innerInterpreterClassMap.put("2.12", "org.apache.zeppelin.spark.SparkScala212Interpreter");
@@ -140,6 +140,9 @@ public class SparkInterpreter extends AbstractInterpreter {
     ClassLoader scalaInterpreterClassLoader = Thread.currentThread().getContextClassLoader();
 
     String zeppelinHome = System.getenv("ZEPPELIN_HOME");
+    if(zeppelinHome == null) {
+      zeppelinHome = System.getProperty("zeppelin.home");
+    }
     if (zeppelinHome != null) {
       // ZEPPELIN_HOME is null in yarn-cluster mode, load it directly via current ClassLoader.
       // otherwise, load from the specific folder ZEPPELIN_HOME/interpreter/spark/scala-<version>

@@ -232,7 +232,13 @@ public abstract class ClusterManager {
         raftAddressMap.put(memberId, address);
 
         MessagingService messagingManager
-            = NettyMessagingService.builder().withAddress(address).build().start().join();
+            = new NettyMessagingService.Builder() {
+          @Override
+          public MessagingService build() {
+            return null;
+          }
+        }.build();
+            //builder().withAddress(address).build().start().join();
         RaftClientProtocol protocol = new RaftClientMessagingProtocol(
             messagingManager, protocolSerializer, raftAddressMap::get);
 
